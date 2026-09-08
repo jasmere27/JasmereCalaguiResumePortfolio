@@ -1,0 +1,639 @@
+---
+// Entry point only. The actual game (src/game/platformer/*) is dynamically
+// imported on click, so it adds zero weight to the initial portfolio load
+// if a visitor never plays. See CareerQuest.astro for the identical pattern
+// this was modeled on.
+---
+
+<section id="stack-climb" class="section pf-entry-section" aria-labelledby="stack-climb-heading">
+  <div class="pf-entry-card" data-animate>
+    <div class="pf-entry-copy">
+      <p class="pf-entry-eyebrow mono-tag">Optional · original 2D platformer</p>
+      <h2 id="stack-climb-heading" class="pf-entry-title">Play Stack Climb</h2>
+      <p class="pf-entry-lede">
+        A small platformer built around my real developer journey. Level 1 — Foundations — runs on
+        my actual education and certifications; jump, dodge, and collect your way to the Diploma
+        Terminal. Entirely optional; the Education section above already tells the full story.
+      </p>
+      <button type="button" class="pf-btn pf-btn-primary" id="stack-climb-launch" data-cursor data-cursor-text="Play">
+        Play Stack Climb
+      </button>
+    </div>
+    <div class="pf-entry-visual" aria-hidden="true">
+      <span class="pf-entry-ground"></span>
+      <span class="pf-entry-platform pf-entry-platform-1"></span>
+      <span class="pf-entry-platform pf-entry-platform-2"></span>
+      <span class="pf-entry-orb pf-entry-orb-1"></span>
+      <span class="pf-entry-orb pf-entry-orb-2"></span>
+      <span class="pf-entry-player"></span>
+    </div>
+  </div>
+</section>
+
+<div id="stack-climb-overlay" class="pf-overlay" role="dialog" aria-modal="true" aria-label="Stack Climb" hidden></div>
+
+<script>
+  const launchBtn = document.getElementById('stack-climb-launch');
+  const overlay = document.getElementById('stack-climb-overlay');
+
+  if (launchBtn && overlay) {
+    let unmount: (() => void) | null = null;
+    let lastFocused: HTMLElement | null = null;
+
+    function closeGame() {
+      overlay!.classList.remove('is-open');
+      document.body.style.overflow = '';
+      window.setTimeout(() => {
+        overlay!.hidden = true;
+        unmount?.();
+        unmount = null;
+      }, 250);
+      lastFocused?.focus();
+    }
+
+    async function openGame() {
+      lastFocused = document.activeElement as HTMLElement;
+      overlay!.hidden = false;
+      overlay!.innerHTML = '<div class="pf-loading">Loading Stack Climb…</div>';
+      document.body.style.overflow = 'hidden';
+      requestAnimationFrame(() => overlay!.classList.add('is-open'));
+
+      try {
+        // Fonts can still be swapping in shortly after page load; waiting
+        // alongside the module import keeps the very first rendered frame
+        // from reflowing under the game's UI once it mounts. Same fix
+        // Career Quest already applies for the same reason.
+        const fontsReady = 'fonts' in document ? document.fonts.ready : Promise.resolve();
+        const [mod] = await Promise.all([import('../game/platformer/platformer'), fontsReady]);
+        unmount = mod.mountPlatformer(overlay!, closeGame);
+      } catch {
+        overlay!.innerHTML =
+          '<div class="pf-loading">Could not load Stack Climb right now.<br /><button type="button" class="pf-btn pf-btn-ghost" id="pf-error-close">Close</button></div>';
+        document.getElementById('pf-error-close')?.addEventListener('click', closeGame);
+      }
+    }
+
+    launchBtn.addEventListener('click', openGame);
+  }
+</script>
+
+<style>
+  .pf-entry-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    margin-top: 1rem;
+    padding: 2rem;
+    background: linear-gradient(155deg, var(--color-surface) 0%, var(--color-surface-raised) 100%);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 1rem;
+    overflow: hidden;
+  }
+
+  .pf-entry-eyebrow {
+    color: var(--color-signal);
+  }
+
+  .pf-entry-title {
+    margin-top: 0.6rem;
+    font-family: var(--font-display);
+    font-size: clamp(1.4rem, 1.2rem + 1vw, 1.8rem);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .pf-entry-lede {
+    margin-top: 0.85rem;
+    max-width: 34rem;
+    color: var(--color-text-muted);
+    line-height: 1.65;
+  }
+
+  .pf-entry-card .pf-btn {
+    margin-top: 1.5rem;
+  }
+
+  .pf-entry-visual {
+    position: relative;
+    height: 5rem;
+    opacity: 0.85;
+  }
+
+  .pf-entry-ground {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0.4rem;
+    height: 3px;
+    background: var(--color-border-strong);
+  }
+
+  .pf-entry-platform {
+    position: absolute;
+    bottom: 1.1rem;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--color-border-strong);
+  }
+
+  .pf-entry-platform-1 {
+    left: 40%;
+    width: 18%;
+  }
+
+  .pf-entry-platform-2 {
+    left: 68%;
+    bottom: 2.3rem;
+    width: 16%;
+  }
+
+  .pf-entry-orb {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--color-signal);
+    bottom: 1.55rem;
+  }
+
+  .pf-entry-orb-1 {
+    left: 47%;
+  }
+
+  .pf-entry-orb-2 {
+    left: 74%;
+    bottom: 2.75rem;
+  }
+
+  .pf-entry-player {
+    position: absolute;
+    left: 8%;
+    bottom: 0.5rem;
+    width: 12px;
+    height: 16px;
+    border-radius: 4px;
+    background: var(--color-accent);
+  }
+
+  @media (min-width: 40rem) {
+    .pf-entry-card {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2.5rem;
+    }
+
+    .pf-entry-visual {
+      width: 14rem;
+      height: 6rem;
+      flex-shrink: 0;
+    }
+  }
+</style>
+
+<style is:global>
+  /* ---------------------------------------------------------------------
+     Stack Climb overlay — styles are global because the game's DOM is
+     built at runtime (innerHTML) by platformer.ts, outside Astro's
+     component-scoping. Everything is namespaced with a pf- prefix.
+     --------------------------------------------------------------------- */
+
+  .pf-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-ink);
+    opacity: 0;
+    transform: scale(0.98);
+    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .pf-overlay.is-open {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .pf-loading {
+    margin: auto;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .pf-topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+  }
+
+  .pf-topbar-left {
+    display: flex;
+    align-items: baseline;
+    gap: 0.9rem;
+    min-width: 0;
+  }
+
+  .pf-wordmark {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-accent);
+    flex-shrink: 0;
+  }
+
+  .pf-mission {
+    color: var(--color-text-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pf-kbd-hint {
+    display: none;
+    color: var(--color-text-faint);
+    white-space: nowrap;
+  }
+
+  @media (hover: hover) and (pointer: fine) and (min-width: 56rem) {
+    .pf-kbd-hint {
+      display: inline;
+    }
+  }
+
+  .pf-topbar-mid {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .pf-lives {
+    display: flex;
+    gap: 0.3rem;
+  }
+
+  .pf-life {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: var(--color-accent);
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+  }
+
+  .pf-life.is-empty {
+    background: transparent;
+    border: 1px solid var(--color-border-strong);
+  }
+
+  .pf-progress-badge {
+    font-size: 0.78rem;
+    color: var(--color-text-faint);
+  }
+
+  .pf-progress-badge strong {
+    color: var(--color-signal);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pf-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .pf-chip-btn {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.4rem;
+    color: var(--color-text-muted);
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+
+  .pf-chip-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .pf-chip-btn.pf-exit:hover {
+    border-color: var(--color-signal);
+    color: var(--color-signal);
+  }
+
+  .pf-stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem;
+    overflow: hidden;
+  }
+
+  .pf-stage:focus {
+    outline: none;
+  }
+
+  .pf-canvas-wrap {
+    position: relative;
+    width: min(100%, 64rem);
+    aspect-ratio: 16 / 9;
+    max-height: 100%;
+  }
+
+  .pf-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    background: var(--color-ink);
+    border: 1px solid var(--color-border);
+    border-radius: 0.6rem;
+  }
+
+  .pf-prompt {
+    position: absolute;
+    left: 50%;
+    bottom: 1rem;
+    transform: translateX(-50%);
+    padding: 0.5rem 0.9rem;
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+    border: 1px solid var(--color-accent-dim);
+    border-radius: 999px;
+    color: var(--color-accent);
+    font-size: 0.78rem;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .pf-toast {
+    position: absolute;
+    left: 50%;
+    top: 0.9rem;
+    transform: translateX(-50%);
+    max-width: 90%;
+    padding: 0.55rem 1rem;
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.6rem;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .pf-touch {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0.85rem;
+  }
+
+  @media (max-width: 48rem), (pointer: coarse) {
+    .pf-touch {
+      display: flex;
+    }
+  }
+
+  .pf-touch-group {
+    display: flex;
+    gap: 0.6rem;
+    pointer-events: auto;
+  }
+
+  .pf-touch-btn {
+    width: 3.4rem;
+    height: 3.4rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+    border: 1px solid var(--color-border-strong);
+    color: var(--color-text);
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  }
+
+  .pf-touch-btn:active {
+    transform: scale(0.92);
+    background: var(--color-surface-hover);
+  }
+
+  .pf-touch-jump {
+    width: 4rem;
+    height: 4rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+  }
+
+  .pf-touch-interact.is-available {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-soft);
+  }
+
+  .pf-overlay-layer {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    background: color-mix(in srgb, var(--color-ink) 88%, transparent);
+    overflow-y: auto;
+  }
+
+  .pf-overlay-layer:not([hidden]) {
+    display: flex;
+  }
+
+  .pf-panel {
+    margin: auto;
+    width: 100%;
+    max-width: 26rem;
+    padding: 1.75rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.85rem;
+  }
+
+  .pf-panel:focus {
+    outline: none;
+  }
+
+  .pf-panel.pf-menu,
+  .pf-panel.pf-victory {
+    max-width: 30rem;
+  }
+
+  .pf-eyebrow {
+    color: var(--color-accent);
+  }
+
+  .pf-panel h2,
+  .pf-panel h3 {
+    margin-top: 0.5rem;
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .pf-panel h2 {
+    font-size: clamp(1.3rem, 1.1rem + 1vw, 1.7rem);
+  }
+
+  .pf-panel h3 {
+    font-size: 1.15rem;
+  }
+
+  .pf-title {
+    margin-top: 0.6rem;
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 1.3rem + 1.5vw, 2.1rem);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .pf-panel-body {
+    margin-top: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    font-size: 0.92rem;
+  }
+
+  .pf-hint {
+    margin-top: 1rem;
+    color: var(--color-text-faint);
+    font-size: 0.72rem;
+    line-height: 1.6;
+  }
+
+  .pf-accent {
+    margin-top: 0.3rem;
+    color: var(--color-accent);
+  }
+
+  .pf-menu-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .pf-controls-detail {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+  }
+
+  .pf-controls-heading {
+    color: var(--color-signal);
+  }
+
+  .pf-controls-col ul {
+    margin-top: 0.6rem;
+    padding-left: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .pf-controls-col li {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+  }
+
+  .pf-cred-list {
+    margin-top: 0.75rem;
+    padding-left: 1.1rem;
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+    line-height: 1.75;
+  }
+
+  .pf-cta-row {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .pf-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.7rem 1.3rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border-radius: 0.55rem;
+    transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+    cursor: pointer;
+  }
+
+  .pf-btn-primary {
+    background: var(--color-accent);
+    color: var(--color-ink);
+  }
+
+  .pf-btn-primary:hover {
+    background: #f0b158;
+    transform: translateY(-1px);
+  }
+
+  .pf-btn-ghost {
+    border: 1px solid var(--color-border-strong);
+    color: var(--color-text);
+  }
+
+  .pf-btn-ghost:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (max-width: 40rem) {
+    .pf-topbar {
+      gap: 0.5rem;
+    }
+
+    .pf-mission {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pf-overlay {
+      transition: none;
+    }
+  }
+</style>
