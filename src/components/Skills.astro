@@ -1,0 +1,383 @@
+---
+import { TECH_CATEGORIES, TECH_DETAILS } from '../data/techDetails';
+---
+
+<section id="skills" class="section" aria-labelledby="skills-heading">
+  <h2 id="skills-heading" class="section-heading mask-reveal"><span class="mask-reveal-inner">Skills</span></h2>
+  <p class="skills-intro">
+    Technologies he actually uses, grouped by role in a build. Tap or hover any technology to see what it was for.
+  </p>
+
+  <div class="skills-groups">
+    {TECH_CATEGORIES.map(({ key, blurb }) => (
+      <div class="skill-group" data-animate>
+        <div class="skill-group-head">
+          <h3>{key}</h3>
+          <p>{blurb}</p>
+        </div>
+        <div class="skill-chip-row">
+          {TECH_DETAILS.filter((t) => t.category === key).map((t) => (
+            <button
+              type="button"
+              class="skill-chip"
+              data-tech={t.name}
+              aria-pressed="false"
+              data-cursor
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+
+  <div id="tech-detail" class="tech-detail" data-animate>
+    <div id="tech-detail-empty" class="tech-detail-empty">
+      <span class="mono-tag">Select a technology</span>
+      <p>Tap or hover any technology above to see what Jasmere used it for, which project it shows up in, and a short note on his experience with it.</p>
+    </div>
+    <div id="tech-detail-content" class="tech-detail-content" hidden></div>
+  </div>
+</section>
+
+<script type="application/json" id="tech-details-data" is:inline set:html={JSON.stringify(TECH_DETAILS)} />
+
+<script>
+  type TechLink = { label: string; anchor: string };
+  type TechDetail = {
+    name: string;
+    category: string;
+    usedFor: string;
+    links: TechLink[];
+    note: string;
+  };
+
+  const dataEl = document.getElementById('tech-details-data');
+  const details: TechDetail[] = dataEl ? JSON.parse(dataEl.textContent || '[]') : [];
+  const byName = new Map(details.map((d) => [d.name, d]));
+
+  const chips = Array.from(document.querySelectorAll<HTMLButtonElement>('.skill-chip'));
+  const emptyState = document.getElementById('tech-detail-empty');
+  const contentEl = document.getElementById('tech-detail-content');
+  const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  let pinned: string | null = null;
+
+  function escapeHtml(s: string): string {
+    return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+  }
+
+  function renderDetail(name: string | null) {
+    if (!contentEl || !emptyState) return;
+
+    if (!name) {
+      emptyState.hidden = false;
+      contentEl.hidden = true;
+      contentEl.innerHTML = '';
+      return;
+    }
+
+    const tech = byName.get(name);
+    if (!tech) return;
+
+    emptyState.hidden = true;
+    contentEl.hidden = false;
+
+    const linksHtml = tech.links.length
+      ? `<div class="tech-links">
+          <span class="tech-links-label mono-tag">Used in</span>
+          <div class="tech-links-row">
+            <span class="tech-node tech-node-source">${escapeHtml(tech.name)}</span>
+            ${tech.links
+              .map(
+                (l, i) =>
+                  `<span class="tech-connector" style="--i:${i}"></span><a href="${l.anchor}" class="tech-node tech-node-target" data-cursor style="--i:${i}">${escapeHtml(l.label)}</a>`
+              )
+              .join('')}
+          </div>
+        </div>`
+      : `<p class="tech-links-none">Not yet tied to a specific project in this portfolio — a general skill on his resume.</p>`;
+
+    contentEl.innerHTML = `
+      <p class="tech-detail-category mono-tag">${escapeHtml(tech.category)}</p>
+      <h3 class="tech-detail-name">${escapeHtml(tech.name)}</h3>
+      <p class="tech-detail-used">${escapeHtml(tech.usedFor)}</p>
+      ${linksHtml}
+      <p class="tech-detail-note">${escapeHtml(tech.note)}</p>
+    `;
+
+    // These connector links carry data-cursor but were injected after
+    // MotionRoot's initial (page-load) binding pass, so the custom cursor
+    // needs an explicit nudge to pick them up.
+    (window as unknown as { __motion?: { refreshCursor?: () => void } }).__motion?.refreshCursor?.();
+
+    // Re-bind highlight-on-click for freshly created connector links; actual
+    // navigation/smooth-scroll is handled globally (MotionRoot).
+    contentEl.querySelectorAll<HTMLAnchorElement>('.tech-node-target').forEach((link) => {
+      link.addEventListener('click', () => {
+        const target = document.querySelector(link.getAttribute('href') || '');
+        if (target) {
+          target.classList.remove('connection-highlight');
+          void (target as HTMLElement).offsetWidth; // restart animation
+          target.classList.add('connection-highlight');
+        }
+      });
+    });
+  }
+
+  function setActiveChip(name: string | null) {
+    chips.forEach((chip) => {
+      const isActive = chip.dataset.tech === name;
+      chip.classList.toggle('is-active', isActive);
+      chip.setAttribute('aria-pressed', String(isActive));
+    });
+  }
+
+  chips.forEach((chip) => {
+    const name = chip.dataset.tech!;
+
+    chip.addEventListener('click', () => {
+      pinned = pinned === name ? null : name;
+      setActiveChip(pinned);
+      renderDetail(pinned);
+    });
+
+    if (canHover) {
+      chip.addEventListener('mouseenter', () => {
+        setActiveChip(name);
+        renderDetail(name);
+      });
+      chip.addEventListener('mouseleave', () => {
+        setActiveChip(pinned);
+        renderDetail(pinned);
+      });
+    }
+  });
+</script>
+
+<style>
+  .skills-intro {
+    margin-top: 1rem;
+    max-width: 36rem;
+    color: var(--color-text-muted);
+  }
+
+  .skills-groups {
+    margin-top: 2.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+
+  .skill-group {
+    padding: 1.4rem 1.5rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+  }
+
+  .skill-group-head h3 {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .skill-group-head p {
+    margin-top: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--color-text-faint);
+  }
+
+  .skill-chip-row {
+    margin-top: 1.1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+
+  .skill-chip {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.45rem;
+    color: var(--color-text-muted);
+    background: transparent;
+    transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease,
+      transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .skill-chip:hover {
+    border-color: var(--color-accent);
+    color: var(--color-text);
+    transform: translateY(-1px);
+  }
+
+  .skill-chip.is-active {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
+  }
+
+  .tech-detail {
+    margin-top: 1.75rem;
+    min-height: 11rem;
+    padding: 1.6rem 1.75rem;
+    background: linear-gradient(155deg, var(--color-surface) 0%, var(--color-surface-raised) 100%);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.85rem;
+  }
+
+  .tech-detail-empty {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    color: var(--color-text-faint);
+  }
+
+  .tech-detail-empty .mono-tag {
+    color: var(--color-accent);
+  }
+
+  .tech-detail-empty p {
+    max-width: 32rem;
+    line-height: 1.6;
+    font-size: 0.92rem;
+  }
+
+  .tech-detail-content {
+    animation: tech-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes tech-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .tech-detail-category {
+    color: var(--color-accent);
+  }
+
+  .tech-detail-name {
+    margin-top: 0.4rem;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .tech-detail-used {
+    margin-top: 0.75rem;
+    max-width: 38rem;
+    color: var(--color-text-muted);
+    line-height: 1.65;
+  }
+
+  .tech-links {
+    margin-top: 1.25rem;
+  }
+
+  .tech-links-label {
+    color: var(--color-text-faint);
+  }
+
+  .tech-links-none {
+    margin-top: 1.25rem;
+    font-size: 0.88rem;
+    font-style: italic;
+    color: var(--color-text-faint);
+  }
+
+  .tech-links-row {
+    margin-top: 0.65rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0;
+  }
+
+  .tech-node {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 0.5rem;
+    white-space: nowrap;
+    animation: node-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    animation-delay: calc(var(--i, 0) * 90ms);
+  }
+
+  @keyframes node-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .tech-node-source {
+    background: var(--color-accent);
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+
+  .tech-node-target {
+    border: 1px solid var(--color-border-strong);
+    color: var(--color-text-muted);
+    transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .tech-node-target:hover {
+    border-color: var(--color-signal);
+    color: var(--color-signal);
+    background: var(--color-signal-soft);
+  }
+
+  .tech-connector {
+    display: inline-block;
+    width: 1.5rem;
+    height: 1px;
+    background: var(--color-border-strong);
+    transform: scaleX(0);
+    transform-origin: left;
+    animation: connector-draw 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation-delay: calc(var(--i, 0) * 90ms + 120ms);
+  }
+
+  @keyframes connector-draw {
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  .tech-detail-note {
+    margin-top: 1.25rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--color-border);
+    font-size: 0.88rem;
+    color: var(--color-text-faint);
+    max-width: 38rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tech-detail-content,
+    .tech-node,
+    .tech-connector {
+      animation: none;
+    }
+
+    .tech-connector {
+      transform: scaleX(1);
+    }
+  }
+</style>

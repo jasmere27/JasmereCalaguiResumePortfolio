@@ -1,0 +1,139 @@
+---
+// No real screenshots exist for any project in the resume/portfolio, and
+// inventing one would misrepresent the work. Instead, this renders an
+// honest, data-driven architecture diagram: each project's real `stack`
+// grouped by the same categories already used in the Skills section
+// (techDetails.ts) — clearly a schematic, never presented as a UI capture.
+import { TECH_DETAILS } from '../data/techDetails';
+
+interface Props {
+  stack: string[];
+  compact?: boolean;
+}
+
+const { stack, compact = false } = Astro.props;
+
+const CATEGORY_ORDER = ['Frontend', 'Backend', 'Database', 'AI / ML', 'Tools', 'Other'] as const;
+
+function categoryOf(name: string): string {
+  return TECH_DETAILS.find((t) => t.name === name)?.category ?? 'Other';
+}
+
+const grouped = CATEGORY_ORDER.map((category) => ({
+  category,
+  items: stack.filter((s) => categoryOf(s) === category),
+})).filter((g) => g.items.length > 0);
+---
+
+{compact ? (
+  <div class="glyph-compact" aria-hidden="true">
+    {grouped.map((g, i) => (
+      <span class="glyph-dot" style={`--i:${i}`} data-category={g.category}></span>
+    ))}
+  </div>
+) : (
+  <div class="glyph-full" role="img" aria-label={`Architecture diagram: ${grouped.map((g) => `${g.category} — ${g.items.join(', ')}`).join('; ')}`}>
+    <p class="glyph-caption mono-tag">Architecture — grouped from the real stack, not a screenshot</p>
+    <div class="glyph-layers">
+      {grouped.map((g) => (
+        <div class="glyph-layer">
+          <span class="glyph-layer-label mono-tag">{g.category}</span>
+          <div class="glyph-layer-chips">
+            {g.items.map((item) => (
+              <span class="glyph-chip">{item}</span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+<style>
+  .glyph-compact {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .glyph-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--color-accent);
+    position: relative;
+  }
+
+  .glyph-dot[data-category='AI / ML'] {
+    background: var(--color-signal);
+  }
+
+  .glyph-dot::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 100%;
+    width: 0.6rem;
+    height: 1px;
+    background: var(--color-border-strong);
+  }
+
+  .glyph-dot:last-child::after {
+    display: none;
+  }
+
+  .glyph-full {
+    padding: 1.5rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+  }
+
+  .glyph-caption {
+    color: var(--color-text-faint);
+  }
+
+  .glyph-layers {
+    margin-top: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding-left: 1rem;
+    border-left: 1px solid var(--color-border-strong);
+  }
+
+  .glyph-layer {
+    position: relative;
+  }
+
+  .glyph-layer::before {
+    content: '';
+    position: absolute;
+    left: -1.28rem;
+    top: 0.4rem;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-accent);
+  }
+
+  .glyph-layer-label {
+    color: var(--color-accent);
+  }
+
+  .glyph-layer-chips {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .glyph-chip {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.4rem;
+  }
+</style>

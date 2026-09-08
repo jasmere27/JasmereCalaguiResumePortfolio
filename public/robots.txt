@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://jasmerecalagui.pages.dev/sitemap.xml

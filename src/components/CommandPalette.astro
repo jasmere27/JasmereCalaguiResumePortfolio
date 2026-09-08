@@ -1,0 +1,319 @@
+---
+import { profile, nav } from '../data/resume';
+
+const items = [
+  ...nav.map((n) => ({
+    id: `nav-${n.href.slice(1)}`,
+    kind: 'Section',
+    label: n.label,
+    hint: 'Jump to section',
+    action: 'nav',
+    value: n.href,
+  })),
+  {
+    id: 'action-email',
+    kind: 'Action',
+    label: 'Email me',
+    hint: profile.email,
+    action: 'link',
+    value: `mailto:${profile.email}`,
+  },
+  {
+    id: 'action-copy-email',
+    kind: 'Action',
+    label: 'Copy email address',
+    hint: profile.email,
+    action: 'copy',
+    value: profile.email,
+  },
+  {
+    id: 'action-call',
+    kind: 'Action',
+    label: 'Call me',
+    hint: profile.phone,
+    action: 'link',
+    value: `tel:${profile.phone.replace(/\s+/g, '')}`,
+  },
+  {
+    id: 'action-resume',
+    kind: 'Action',
+    label: 'Download résumé',
+    hint: 'PDF',
+    action: 'download',
+    value: '/jasmere-paul-calagui-resume.pdf',
+  },
+  {
+    id: 'action-career-quest',
+    kind: 'Action',
+    label: 'Play Career Quest',
+    hint: 'Interactive · ~3 min',
+    action: 'nav',
+    value: '#career-quest',
+  },
+  {
+    id: 'action-terminal',
+    kind: 'Action',
+    label: 'Open Terminal',
+    hint: 'Try: whoami, skills, projects',
+    action: 'nav',
+    value: '#terminal',
+  },
+];
+---
+
+<div id="cmdk-overlay" class="cmdk-overlay" hidden>
+  <div
+    id="cmdk-panel"
+    class="cmdk-panel"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Quick navigation"
+  >
+    <div class="cmdk-input-row">
+      <input
+        id="cmdk-input"
+        class="cmdk-input"
+        type="text"
+        placeholder="Jump to a section or run an action…"
+        autocomplete="off"
+        spellcheck="false"
+        aria-controls="cmdk-list"
+        role="combobox"
+        aria-expanded="true"
+      />
+      <kbd class="mono-tag">Esc</kbd>
+    </div>
+    <ul id="cmdk-list" class="cmdk-list" role="listbox"></ul>
+  </div>
+</div>
+
+<script type="application/json" id="cmdk-data" is:inline set:html={JSON.stringify(items)} />
+
+<script>
+  type PaletteItem = {
+    id: string;
+    kind: string;
+    label: string;
+    hint: string;
+    action: 'nav' | 'link' | 'copy' | 'download';
+    value: string;
+  };
+
+  const dataEl = document.getElementById('cmdk-data');
+  const items: PaletteItem[] = dataEl ? JSON.parse(dataEl.textContent || '[]') : [];
+
+  const triggers = document.querySelectorAll('.cmdk-open-trigger');
+  const overlay = document.getElementById('cmdk-overlay');
+  const panel = document.getElementById('cmdk-panel');
+  const input = document.getElementById('cmdk-input') as HTMLInputElement | null;
+  const list = document.getElementById('cmdk-list');
+
+  let activeIndex = 0;
+  let filtered: PaletteItem[] = items;
+  let lastFocused: HTMLElement | null = null;
+
+  function render() {
+    if (!list) return;
+    list.innerHTML = '';
+    filtered.forEach((item, i) => {
+      const li = document.createElement('li');
+      li.role = 'option';
+      li.id = `cmdk-item-${i}`;
+      li.setAttribute('aria-selected', String(i === activeIndex));
+      li.className = 'cmdk-item' + (i === activeIndex ? ' is-active' : '');
+      li.innerHTML = `
+        <span class="cmdk-item-kind mono-tag">${item.kind}</span>
+        <span class="cmdk-item-label">${item.label}</span>
+        <span class="cmdk-item-hint">${item.hint}</span>
+      `;
+      li.addEventListener('mouseenter', () => {
+        activeIndex = i;
+        render();
+      });
+      li.addEventListener('click', () => runItem(item));
+      list.appendChild(li);
+    });
+    if (input) input.setAttribute('aria-activedescendant', `cmdk-item-${activeIndex}`);
+  }
+
+  async function runItem(item: PaletteItem) {
+    if (item.action === 'nav') {
+      const motion = (window as unknown as { __motion?: { scrollToHash: (h: string) => void } })
+        .__motion;
+      if (motion?.scrollToHash) motion.scrollToHash(item.value);
+      else window.location.href = item.value;
+    } else if (item.action === 'link') {
+      window.location.href = item.value;
+    } else if (item.action === 'download') {
+      const a = document.createElement('a');
+      a.href = item.value;
+      a.download = '';
+      a.click();
+    } else if (item.action === 'copy') {
+      try {
+        await navigator.clipboard.writeText(item.value);
+      } catch {
+        // Clipboard API unavailable — silently ignore, user can still navigate to Contact.
+      }
+    }
+    close();
+  }
+
+  function filter(query: string) {
+    const q = query.trim().toLowerCase();
+    filtered = q
+      ? items.filter(
+          (item) =>
+            item.label.toLowerCase().includes(q) || item.kind.toLowerCase().includes(q)
+        )
+      : items;
+    activeIndex = 0;
+    render();
+  }
+
+  function open() {
+    if (!overlay || !input) return;
+    lastFocused = document.activeElement as HTMLElement;
+    overlay.hidden = false;
+    document.body.style.overflow = 'hidden';
+    filter('');
+    input.value = '';
+    input.focus();
+    document.addEventListener('keydown', onKeydown);
+  }
+
+  function close() {
+    if (!overlay) return;
+    overlay.hidden = true;
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', onKeydown);
+    lastFocused?.focus();
+  }
+
+  function onKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = Math.min(activeIndex + 1, filtered.length - 1);
+      render();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = Math.max(activeIndex - 1, 0);
+      render();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const item = filtered[activeIndex];
+      if (item) runItem(item);
+    }
+  }
+
+  triggers.forEach((t) => t.addEventListener('click', open));
+
+  overlay?.addEventListener('mousedown', (e) => {
+    if (!panel?.contains(e.target as Node)) close();
+  });
+
+  input?.addEventListener('input', () => filter(input.value));
+
+  window.addEventListener('keydown', (e) => {
+    const isK = e.key === 'k' || e.key === 'K';
+    if (isK && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      if (overlay?.hidden) open();
+      else close();
+    }
+  });
+</script>
+
+<style>
+  .cmdk-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 12vh 1.25rem 2rem;
+    background: rgba(6, 8, 12, 0.72);
+    backdrop-filter: blur(4px);
+  }
+
+  .cmdk-panel {
+    width: 100%;
+    max-width: 34rem;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.85rem;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+  }
+
+  .cmdk-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.9rem 1.1rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .cmdk-input {
+    flex: 1;
+    background: none;
+    color: var(--color-text);
+    font-size: 0.98rem;
+  }
+
+  .cmdk-input-row kbd {
+    padding: 0.15rem 0.4rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.3rem;
+    color: var(--color-text-faint);
+  }
+
+  .cmdk-list {
+    max-height: 20rem;
+    overflow-y: auto;
+    padding: 0.5rem;
+  }
+
+  .cmdk-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+  }
+
+  .cmdk-item.is-active {
+    background: var(--color-accent-soft);
+  }
+
+  .cmdk-item-kind {
+    flex-shrink: 0;
+    width: 4.2rem;
+    color: var(--color-text-faint);
+  }
+
+  .cmdk-item.is-active .cmdk-item-kind {
+    color: var(--color-accent);
+  }
+
+  .cmdk-item-label {
+    color: var(--color-text);
+    font-size: 0.92rem;
+  }
+
+  .cmdk-item-hint {
+    margin-left: auto;
+    padding-left: 1rem;
+    color: var(--color-text-faint);
+    font-size: 0.78rem;
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>

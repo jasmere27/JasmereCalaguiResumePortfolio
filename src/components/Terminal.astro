@@ -1,0 +1,422 @@
+---
+import { COMMAND_NAMES } from '../data/terminalCommands';
+
+const SECTION_ANCHORS = ['about', 'skills', 'experience', 'projects', 'education', 'contact'];
+const DEFAULT_SUGGESTIONS = ['whoami', 'skills', 'projects', 'experience', 'education', 'contact', 'resume', 'help'];
+---
+
+<section id="terminal" class="section" aria-labelledby="terminal-heading">
+  <h2 id="terminal-heading" class="section-heading mask-reveal"><span class="mask-reveal-inner">Terminal</span></h2>
+  <p class="terminal-intro mono-tag">Explore my portfolio through the terminal</p>
+
+  <div class="term-window" data-animate>
+    <div class="term-chrome">
+      <span class="term-dot term-dot-a" aria-hidden="true"></span>
+      <span class="term-dot term-dot-b" aria-hidden="true"></span>
+      <span class="term-dot term-dot-c" aria-hidden="true"></span>
+      <span class="term-chrome-title mono-tag">visitor@jasmere-portfolio — zsh</span>
+    </div>
+
+    <div class="term-body" id="term-body">
+      <div class="term-output" id="term-output" role="log" aria-live="polite" aria-label="Terminal output"></div>
+
+      <form id="term-form" class="term-input-row" autocomplete="off">
+        <label for="term-input" class="visually-hidden">Terminal command input</label>
+        <span class="term-prompt mono-tag" aria-hidden="true">visitor@portfolio<span class="term-prompt-sep">:~$</span></span>
+        <input
+          id="term-input"
+          class="term-input"
+          type="text"
+          placeholder="type a command…"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          inputmode="text"
+        />
+      </form>
+
+      <div class="term-suggestions" id="term-suggestions" role="group" aria-label="Command suggestions"></div>
+    </div>
+  </div>
+</section>
+
+<script
+  type="application/json"
+  id="terminal-config-data"
+  is:inline
+  set:html={JSON.stringify({ COMMAND_NAMES, SECTION_ANCHORS, DEFAULT_SUGGESTIONS })}
+/>
+
+<script>
+  import { gsap } from 'gsap';
+  import { COMMANDS, WELCOME_LINES, type TerminalLine } from '../data/terminalCommands';
+
+  const cfg: { COMMAND_NAMES: string[]; SECTION_ANCHORS: string[]; DEFAULT_SUGGESTIONS: string[] } = JSON.parse(
+    document.getElementById('terminal-config-data')?.textContent || '{}'
+  );
+
+  const body = document.getElementById('term-body')!;
+  const outputEl = document.getElementById('term-output')!;
+  const form = document.getElementById('term-form') as HTMLFormElement;
+  const input = document.getElementById('term-input') as HTMLInputElement;
+  const suggestionsEl = document.getElementById('term-suggestions')!;
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const ALL_SUGGESTIONS = [
+    ...cfg.COMMAND_NAMES.filter((n) => n !== 'open'),
+    'open',
+    ...cfg.SECTION_ANCHORS.map((s) => `open ${s}`),
+  ];
+
+  const history: string[] = [];
+  let historyIndex = -1;
+
+  function scrollToBottom() {
+    outputEl.scrollTop = outputEl.scrollHeight;
+  }
+
+  function typeText(el: HTMLElement, text: string): Promise<void> {
+    if (reducedMotion || !text) {
+      el.textContent = text;
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      let i = 0;
+      const speed = Math.max(6, Math.min(18, 400 / Math.max(text.length, 1)));
+      const tick = () => {
+        el.textContent = text.slice(0, i);
+        i++;
+        if (i <= text.length) {
+          window.setTimeout(tick, speed);
+        } else {
+          resolve();
+        }
+      };
+      tick();
+    });
+  }
+
+  function appendEcho(commandText: string) {
+    const row = document.createElement('div');
+    row.className = 'term-line term-line-echo';
+    row.innerHTML = `<span class="term-echo-prompt">visitor@portfolio:~$</span> <span class="term-echo-text"></span>`;
+    row.querySelector('.term-echo-text')!.textContent = commandText;
+    outputEl.appendChild(row);
+    scrollToBottom();
+  }
+
+  async function appendResult(lines: TerminalLine[]) {
+    if (!lines.length) return;
+
+    const [first, ...rest] = lines;
+    const firstRow = document.createElement('div');
+    firstRow.className = `term-line${first.strong ? ' term-line-strong' : ''}`;
+    outputEl.appendChild(firstRow);
+    scrollToBottom();
+    await typeText(firstRow, first.text);
+
+    for (const line of rest) {
+      const row = document.createElement('div');
+      row.className = `term-line${line.strong ? ' term-line-strong' : ''}`;
+      row.textContent = line.text || ' ';
+      outputEl.appendChild(row);
+      scrollToBottom();
+      if (!reducedMotion) {
+        gsap.fromTo(row, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.22, ease: 'power2.out' });
+        await new Promise((r) => window.setTimeout(r, 45));
+      }
+    }
+  }
+
+  function appendError(text: string) {
+    const row = document.createElement('div');
+    row.className = 'term-line term-line-error';
+    row.textContent = text;
+    outputEl.appendChild(row);
+    scrollToBottom();
+  }
+
+  // Output prints asynchronously (typewriter + staggered lines). Without
+  // serializing invocations, submitting a second command before the first
+  // finishes printing interleaves both outputs' lines in the DOM — verified
+  // directly, and very plausible for a real visitor typing several commands
+  // in quick succession. This queue guarantees strict FIFO ordering: each
+  // command's full output completes before the next one starts.
+  let commandQueue: Promise<void> = Promise.resolve();
+
+  function runCommand(raw: string) {
+    commandQueue = commandQueue.then(() => executeCommand(raw));
+  }
+
+  async function executeCommand(raw: string) {
+    const trimmed = raw.trim();
+    if (!trimmed) return;
+
+    appendEcho(trimmed);
+    history.push(trimmed);
+    historyIndex = history.length;
+
+    const [name, ...argParts] = trimmed.split(/\s+/);
+    const key = name.toLowerCase();
+    const arg = argParts.join(' ');
+
+    if (key === 'clear') {
+      outputEl.innerHTML = '';
+      return;
+    }
+
+    const command = COMMANDS[key];
+    if (!command) {
+      appendError(`command not found: ${key}`);
+      await appendResult([{ text: 'Type "help" to see available commands.' }]);
+      return;
+    }
+
+    const result = command.run(arg);
+    const lines = Array.isArray(result) ? result : result.lines;
+    await appendResult(lines);
+
+    if (!Array.isArray(result) && result.action === 'download-resume') {
+      const a = document.createElement('a');
+      a.href = '/jasmere-paul-calagui-resume.pdf';
+      a.download = '';
+      a.click();
+    }
+  }
+
+  function renderSuggestions(value: string) {
+    const v = value.trim().toLowerCase();
+    const matches = v
+      ? ALL_SUGGESTIONS.filter((s) => s.startsWith(v) && s !== v).slice(0, 6)
+      : cfg.DEFAULT_SUGGESTIONS;
+
+    suggestionsEl.innerHTML = '';
+    matches.forEach((s) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'term-chip';
+      chip.textContent = s;
+      chip.addEventListener('click', () => {
+        input.value = s;
+        input.focus();
+        runCommand(s);
+        input.value = '';
+        renderSuggestions('');
+      });
+      suggestionsEl.appendChild(chip);
+    });
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const value = input.value;
+    input.value = '';
+    renderSuggestions('');
+    runCommand(value);
+  });
+
+  input.addEventListener('input', () => renderSuggestions(input.value));
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (historyIndex > 0) {
+        historyIndex--;
+        input.value = history[historyIndex] ?? '';
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyIndex < history.length - 1) {
+        historyIndex++;
+        input.value = history[historyIndex] ?? '';
+      } else {
+        historyIndex = history.length;
+        input.value = '';
+      }
+    }
+  });
+
+  body.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('.term-chip')) return;
+    input.focus();
+  });
+
+  renderSuggestions('');
+
+  // Play the welcome typewriter when the terminal actually scrolls into
+  // view, not at page load (it sits far down the page — no reason to run
+  // timers or "type" text nobody can see yet).
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          appendResult(WELCOME_LINES);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.3 }
+    );
+    io.observe(body);
+  } else {
+    appendResult(WELCOME_LINES);
+  }
+</script>
+
+<style>
+  .terminal-intro {
+    margin-top: 1rem;
+    color: var(--color-accent);
+  }
+
+  .term-window {
+    margin-top: 2rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.85rem;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  }
+
+  .term-chrome {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-surface-raised);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .term-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+  }
+
+  .term-dot-a {
+    background: #d97757;
+    opacity: 0.7;
+  }
+
+  .term-dot-b {
+    background: var(--color-accent);
+    opacity: 0.8;
+  }
+
+  .term-dot-c {
+    background: var(--color-signal);
+    opacity: 0.8;
+  }
+
+  .term-chrome-title {
+    margin-left: 0.5rem;
+    color: var(--color-text-faint);
+    font-size: 0.75rem;
+  }
+
+  .term-body {
+    background: var(--color-ink);
+    padding: 1.25rem 1.25rem 1rem;
+    cursor: text;
+  }
+
+  .term-output {
+    max-height: 20rem;
+    overflow-y: auto;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: var(--color-text-muted);
+  }
+
+  .term-line {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .term-line-strong {
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
+  .term-line-error {
+    color: var(--color-accent);
+  }
+
+  .term-echo-prompt {
+    color: var(--color-signal);
+  }
+
+  .term-echo-text {
+    color: var(--color-text);
+  }
+
+  .term-input-row {
+    margin-top: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+
+  .term-prompt {
+    color: var(--color-signal);
+    white-space: nowrap;
+  }
+
+  .term-prompt-sep {
+    color: var(--color-text-faint);
+  }
+
+  .term-input {
+    flex: 1;
+    min-width: 0;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--color-text);
+    font: inherit;
+    caret-color: var(--color-accent);
+    caret-shape: block;
+  }
+
+  .term-input::placeholder {
+    color: var(--color-text-faint);
+    opacity: 0.7;
+  }
+
+  .term-suggestions {
+    margin-top: 0.9rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .term-chip {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--color-text-faint);
+    padding: 0.35rem 0.65rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.4rem;
+    transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .term-chip:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    background: var(--color-accent-soft);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>

@@ -1,0 +1,110 @@
+---
+import { profile, strengths } from '../data/resume';
+import NodeGraph from './NodeGraph.astro';
+---
+
+<section id="about" class="section" aria-labelledby="about-heading">
+  <h2 id="about-heading" class="section-heading mask-reveal"><span class="mask-reveal-inner">About</span></h2>
+
+  <div class="about-layout">
+    <div class="about-body">
+      <p class="about-summary text-balance" data-animate>{profile.summary}</p>
+
+      <ul class="strength-list">
+        {strengths.map((s) => (
+          <li class="strength-item" data-animate>
+            <span class="strength-label">{s.label}</span>
+            <span class="strength-detail">{s.detail}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <div class="about-visual" aria-hidden="true" data-animate>
+      <NodeGraph />
+      <p class="about-visual-caption mono-tag">frontend · backend · database · AI</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .about-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+  }
+
+  .about-summary {
+    margin-top: 1.5rem;
+    max-width: 42rem;
+    font-size: 1.05rem;
+    line-height: 1.75;
+    color: var(--color-text-muted);
+  }
+
+  .strength-list {
+    margin-top: 2.5rem;
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .strength-item {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+    padding-block: 1.1rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .strength-label {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .strength-detail {
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--color-text-muted);
+  }
+
+  @media (min-width: 40rem) {
+    .strength-item {
+      grid-template-columns: 12rem 1fr;
+      gap: 1.5rem;
+      align-items: baseline;
+    }
+  }
+
+  .about-visual {
+    display: none;
+  }
+
+  @media (min-width: 64rem) {
+    .about-layout {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 3rem;
+    }
+
+    .about-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .about-visual {
+      display: block;
+      flex-shrink: 0;
+      width: 18rem;
+      padding-top: 0.5rem;
+      opacity: 0.85;
+    }
+
+    .about-visual-caption {
+      margin-top: 0.5rem;
+      text-align: center;
+      color: var(--color-text-faint);
+    }
+  }
+</style>

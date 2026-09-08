@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.astro/
+.env
+.dev.vars
+.wrangler/
+.DS_Store
+
+# Original source uploads, superseded by the versions under public/ that the
+# site actually serves — kept locally, not part of the tracked project.
+/Jasmere Paul Calagui Resume.pdf
+/jas profile.png

@@ -1,0 +1,642 @@
+---
+import { PROJECTS_WITH_CASE } from '../data/caseStudies';
+import ProjectGlyph from './ProjectGlyph.astro';
+
+const featured = PROJECTS_WITH_CASE.find((p) => p.featured);
+const rest = PROJECTS_WITH_CASE.filter((p) => !p.featured);
+const ordered = [featured, ...rest].filter(Boolean) as typeof PROJECTS_WITH_CASE;
+
+const slug = (name: string) => `project-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+---
+
+<section id="projects" class="section" aria-labelledby="projects-heading">
+  <h2 id="projects-heading" class="section-heading mask-reveal"><span class="mask-reveal-inner">Projects</span></h2>
+  <p class="projects-intro">Independent and team-led work, from a research-driven AI system to client-ready tools. Click any project for the full case study.</p>
+
+  {featured && (
+    <button
+      type="button"
+      id={slug(featured.name)}
+      class="project-featured tilt-card spotlight-card"
+      data-tilt
+      data-animate
+      data-cursor
+      data-cursor-text="Case Study"
+      data-case-index="0"
+    >
+      <div class="project-featured-border" aria-hidden="true"></div>
+      <div class="project-featured-head">
+        <span class="mono-tag project-flag">Flagship project</span>
+        <span class="mono-tag project-period">{featured.period}</span>
+      </div>
+      <h3>{featured.name}</h3>
+      <p class="project-role">{featured.role}</p>
+      <p class="project-description">{featured.description}</p>
+
+      <ProjectGlyph stack={featured.stack} compact />
+
+      <ul class="project-features">
+        {featured.features.map((f) => (
+          <li>{f}</li>
+        ))}
+      </ul>
+
+      <ul class="project-stack">
+        {featured.stack.map((t) => (
+          <li>{t}</li>
+        ))}
+      </ul>
+
+      <span class="project-view-cta">View case study <span aria-hidden="true">→</span></span>
+    </button>
+  )}
+
+  <div class="project-grid">
+    {rest.map((project, i) => (
+      <button
+        type="button"
+        id={slug(project.name)}
+        class="project-card card tilt-card spotlight-card"
+        data-tilt
+        data-animate
+        data-cursor
+        data-cursor-text="Case Study"
+        data-case-index={i + 1}
+      >
+        <div class="project-card-head">
+          <h3>{project.name}</h3>
+          <span class="mono-tag project-period">{project.period}</span>
+        </div>
+        <p class="project-role">{project.role}</p>
+        <p class="project-description">{project.description}</p>
+
+        <ProjectGlyph stack={project.stack} compact />
+
+        <ul class="project-features">
+          {project.features.map((f) => (
+            <li>{f}</li>
+          ))}
+        </ul>
+
+        <ul class="project-stack">
+          {project.stack.map((t) => (
+            <li>{t}</li>
+          ))}
+        </ul>
+
+        <span class="project-view-cta">View case study <span aria-hidden="true">→</span></span>
+      </button>
+    ))}
+  </div>
+</section>
+
+<!-- Pre-rendered case-study content, one per project. Inert <template>s cost
+     nothing at paint/layout time; the lazy-loaded runtime clones whichever
+     one is needed into the overlay. Rendering this with Astro (rather than
+     building HTML strings in JS) means the copy is real, crawlable markup
+     and there's no risk of it drifting from the data. -->
+{ordered.map((p, i) => (
+  <template data-case-template data-case-index={i}>
+    <article class="pcs-content">
+      <header class="pcs-hero" data-animate-cs>
+        <p class="pcs-eyebrow mono-tag">{p.featured ? 'Flagship project' : 'Project'} · {p.period}</p>
+        <h2 class="pcs-title">{p.name}</h2>
+        <p class="pcs-role">{p.role}</p>
+        <ProjectGlyph stack={p.stack} compact />
+      </header>
+
+      <section class="pcs-section" data-animate-cs>
+        <h3 class="pcs-heading mono-tag">Overview</h3>
+        <p>{p.description}</p>
+      </section>
+
+      <section class="pcs-section" data-animate-cs>
+        <h3 class="pcs-heading mono-tag">Problem</h3>
+        <p>{p.case.problem}</p>
+      </section>
+
+      <section class="pcs-section" data-animate-cs>
+        <h3 class="pcs-heading mono-tag">Solution</h3>
+        <p>{p.case.solution}</p>
+      </section>
+
+      <section class="pcs-section" data-animate-cs>
+        <h3 class="pcs-heading mono-tag">My Role</h3>
+        <p>{p.role}</p>
+      </section>
+
+      <section class="pcs-section" data-animate-cs>
+        <h3 class="pcs-heading mono-tag">Technologies Used</h3>
+        <ul class="pcs-tags">
+          {p.stack.map((t) => <li>{t}</li>)}
+        </ul>
+      </section>
+
+      <section class="pcs-section" data-animate-cs>
+        <h3 class="pcs-heading mono-tag">Key Features</h3>
+        <ul class="pcs-list">
+          {p.features.map((f) => <li>{f}</li>)}
+        </ul>
+      </section>
+
+      <section class="pcs-section" data-animate-cs>
+        <h3 class="pcs-heading mono-tag">Challenges</h3>
+        <p>{p.case.challenges}</p>
+      </section>
+
+      <section class="pcs-section" data-animate-cs>
+        <h3 class="pcs-heading mono-tag">How I Solved Them</h3>
+        <p>{p.case.howSolved}</p>
+      </section>
+
+      <section class="pcs-section" data-animate-cs>
+        <h3 class="pcs-heading mono-tag">Outcome</h3>
+        <p>{p.case.outcome}</p>
+      </section>
+
+      {p.link && (
+        <section class="pcs-section" data-animate-cs>
+          <h3 class="pcs-heading mono-tag">Links</h3>
+          <a href={p.link} target="_blank" rel="noopener noreferrer" class="pcs-link" data-cursor>
+            View project <span aria-hidden="true">↗</span>
+          </a>
+        </section>
+      )}
+
+      <section class="pcs-section" data-animate-cs>
+        <h3 class="pcs-heading mono-tag">Architecture</h3>
+        <ProjectGlyph stack={p.stack} />
+      </section>
+    </article>
+  </template>
+))}
+
+<div id="pcs-overlay" class="pcs-overlay" role="dialog" aria-modal="true" aria-label="Project case study" hidden>
+  <header class="pcs-topbar">
+    <button type="button" id="pcs-close" class="pcs-chip-btn" data-cursor>
+      <span aria-hidden="true">←</span> Close
+    </button>
+    <div class="pcs-dots" id="pcs-dots" role="list" aria-label="Project navigation"></div>
+    <div class="pcs-nav-buttons">
+      <button type="button" id="pcs-prev" class="pcs-chip-btn" aria-label="Previous project" data-cursor>Prev</button>
+      <button type="button" id="pcs-next" class="pcs-chip-btn" aria-label="Next project" data-cursor>Next</button>
+    </div>
+  </header>
+  <div class="pcs-stage" id="pcs-stage" tabindex="-1"></div>
+</div>
+
+<script>
+  import { gsap } from 'gsap';
+
+  const canTilt =
+    window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (canTilt) {
+    const MAX_TILT = 7;
+    document.querySelectorAll<HTMLElement>('[data-tilt]').forEach((card) => {
+      const state = { rx: 0, ry: 0 };
+      const setRx = gsap.quickTo(state, 'rx', {
+        duration: 0.5,
+        ease: 'power3.out',
+        onUpdate: () => card.style.setProperty('--tilt-x', `${state.rx}deg`),
+      });
+      const setRy = gsap.quickTo(state, 'ry', {
+        duration: 0.5,
+        ease: 'power3.out',
+        onUpdate: () => card.style.setProperty('--tilt-y', `${state.ry}deg`),
+      });
+
+      card.addEventListener('pointermove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const px = (e.clientX - rect.left) / rect.width;
+        const py = (e.clientY - rect.top) / rect.height;
+        setRx((py - 0.5) * -MAX_TILT);
+        setRy((px - 0.5) * MAX_TILT);
+        card.style.setProperty('--mx', `${px * 100}%`);
+        card.style.setProperty('--my', `${py * 100}%`);
+      });
+
+      card.addEventListener('pointerleave', () => {
+        setRx(0);
+        setRy(0);
+      });
+    });
+  }
+
+  // Case study: dynamically imported only on first open, so it costs
+  // nothing for a visitor who never clicks a project card.
+  let mountCaseStudy: ((index: number) => void) | null = null;
+
+  document.querySelectorAll<HTMLButtonElement>('[data-case-index]').forEach((card) => {
+    card.addEventListener('click', async () => {
+      const index = Number(card.dataset.caseIndex);
+      if (!mountCaseStudy) {
+        const mod = await import('../scripts/caseStudy');
+        mountCaseStudy = mod.mountCaseStudy;
+      }
+      mountCaseStudy(index);
+    });
+  });
+</script>
+
+<style>
+  .projects-intro {
+    margin-top: 1rem;
+    max-width: 34rem;
+    color: var(--color-text-muted);
+  }
+
+  .project-featured,
+  .project-card {
+    display: block;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .project-featured {
+    position: relative;
+    margin-top: 2.25rem;
+    padding: 2rem;
+    background: linear-gradient(155deg, var(--color-surface) 0%, var(--color-surface-raised) 100%);
+    border: 1px solid var(--color-accent-dim);
+    border-radius: 1rem;
+  }
+
+  .project-featured-border {
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0%,
+      var(--color-accent) 10%,
+      transparent 22%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    animation: border-spin 3.2s linear infinite;
+    animation-play-state: paused;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+
+  .project-featured:hover .project-featured-border {
+    opacity: 1;
+    animation-play-state: running;
+  }
+
+  @keyframes border-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .project-featured-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .project-flag {
+    color: var(--color-accent);
+  }
+
+  .project-period {
+    color: var(--color-text-faint);
+  }
+
+  .project-featured h3,
+  .project-card h3 {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-top: 0.75rem;
+  }
+
+  .project-featured h3 {
+    font-size: clamp(1.5rem, 1.3rem + 1vw, 1.9rem);
+  }
+
+  .project-card h3 {
+    font-size: 1.1rem;
+    margin-top: 0;
+  }
+
+  .project-role {
+    margin-top: 0.3rem;
+    font-size: 0.85rem;
+    color: var(--color-signal);
+  }
+
+  .project-description {
+    margin-top: 0.9rem;
+    color: var(--color-text-muted);
+    line-height: 1.65;
+    max-width: 40rem;
+  }
+
+  .project-featured :global(.glyph-compact),
+  .project-card :global(.glyph-compact) {
+    margin-top: 1.1rem;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateZ(20px);
+  }
+
+  .project-features {
+    margin-top: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .project-features li {
+    position: relative;
+    padding-left: 1.1rem;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--color-text-muted);
+  }
+
+  .project-features li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.6em;
+    width: 5px;
+    height: 1px;
+    background: var(--color-text-faint);
+  }
+
+  .project-stack {
+    margin-top: 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .project-stack li {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-text-faint);
+    padding: 0.25rem 0.55rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.35rem;
+    transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    transition-delay: calc(var(--i, 0) * 30ms);
+  }
+
+  .project-featured:hover .project-stack li,
+  .project-card:hover .project-stack li {
+    border-color: var(--color-accent-dim);
+  }
+
+  .project-view-cta {
+    margin-top: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--color-text-faint);
+    transition: color 0.2s ease, gap 0.2s ease;
+  }
+
+  .project-view-cta span {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .project-featured:hover .project-view-cta,
+  .project-card:hover .project-view-cta {
+    color: var(--color-accent);
+    gap: 0.6rem;
+  }
+
+  .project-featured:hover .project-view-cta span,
+  .project-card:hover .project-view-cta span {
+    transform: translateX(3px);
+  }
+
+  .project-grid {
+    margin-top: 1.5rem;
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: 1fr;
+  }
+
+  .project-card {
+    padding: 1.75rem;
+  }
+
+  .project-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  @media (min-width: 42rem) {
+    .project-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>
+
+<style is:global>
+  /* Case-study overlay — global because content is cloned at runtime from
+     <template>s, outside Astro's component-scoping. Namespaced pcs-. */
+
+  .pcs-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-ink);
+    opacity: 0;
+    transform: scale(0.98);
+    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .pcs-overlay.is-open {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .pcs-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+  }
+
+  .pcs-dots {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .pcs-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--color-border-strong);
+    transition: background-color 0.25s ease, transform 0.25s ease;
+  }
+
+  .pcs-dot.is-current {
+    background: var(--color-accent);
+    transform: scale(1.3);
+  }
+
+  .pcs-nav-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .pcs-chip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.45rem;
+    color: var(--color-text-muted);
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+
+  .pcs-chip-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .pcs-stage {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 2.5rem 1.5rem 4rem;
+  }
+
+  .pcs-stage:focus {
+    outline: none;
+  }
+
+  .pcs-content {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 40rem;
+  }
+
+  .pcs-eyebrow {
+    color: var(--color-accent);
+  }
+
+  .pcs-title {
+    margin-top: 0.6rem;
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 1.6rem + 2vw, 2.75rem);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .pcs-role {
+    margin-top: 0.4rem;
+    color: var(--color-signal);
+    font-size: 0.95rem;
+  }
+
+  .pcs-hero :global(.glyph-compact) {
+    margin-top: 1.5rem;
+  }
+
+  .pcs-section {
+    margin-top: 3rem;
+    padding-top: 2.25rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .pcs-heading {
+    color: var(--color-accent);
+  }
+
+  .pcs-section p {
+    margin-top: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.7;
+    max-width: 36rem;
+  }
+
+  .pcs-tags {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .pcs-tags li {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.45rem;
+  }
+
+  .pcs-list {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .pcs-list li {
+    position: relative;
+    padding-left: 1.2rem;
+    color: var(--color-text-muted);
+    line-height: 1.65;
+    max-width: 36rem;
+  }
+
+  .pcs-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.65em;
+    width: 6px;
+    height: 1px;
+    background: var(--color-text-faint);
+  }
+
+  .pcs-link {
+    margin-top: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--color-accent);
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--color-accent-dim);
+    padding-bottom: 0.15rem;
+    transition: border-color 0.2s ease;
+  }
+
+  .pcs-link:hover {
+    border-color: var(--color-accent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pcs-overlay {
+      transition: none;
+    }
+  }
+</style>

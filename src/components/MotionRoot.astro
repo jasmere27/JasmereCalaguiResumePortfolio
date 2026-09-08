@@ -1,0 +1,219 @@
+---
+// Singleton: smooth-scroll driver, ScrollTrigger registration, and the
+// custom cursor. Everything here is strictly additive — if this script
+// never runs (blocked, errors, old browser), the page is just a normal,
+// fully visible, natively-scrolling page. Nothing depends on it existing.
+---
+
+<div id="cursor-dot" aria-hidden="true"></div>
+<div id="cursor-ring" aria-hidden="true"><span class="cursor-label"></span></div>
+
+<script>
+  import { gsap } from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+  import Lenis from 'lenis';
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  declare global {
+    interface Window {
+      __motion: {
+        reducedMotion: boolean;
+        canHover: boolean;
+        lenis: Lenis | null;
+        scrollToHash: (hash: string) => void;
+        refreshCursor?: () => void;
+      };
+    }
+  }
+
+  function scrollToHash(hash: string) {
+    const target = document.querySelector<HTMLElement>(hash);
+    if (!target) return;
+    if (window.__motion.lenis) {
+      window.__motion.lenis.scrollTo(target, { offset: -16, duration: 1.1 });
+    } else {
+      target.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+    }
+    history.pushState(null, '', hash);
+
+    // Match native anchor behavior for keyboard/screen-reader users: move
+    // focus to the target so tabbing continues from there.
+    if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
+  }
+
+  window.__motion = { reducedMotion, canHover, lenis: null, scrollToHash };
+
+  if (!reducedMotion) {
+    const lenis = new Lenis({
+      duration: 1.05,
+      easing: (t: number) => 1 - Math.pow(1 - t, 3),
+      smoothWheel: true,
+    });
+    window.__motion.lenis = lenis;
+    document.documentElement.style.scrollBehavior = 'auto';
+
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add((time) => {
+      lenis.raf(time * 1000);
+    });
+    gsap.ticker.lagSmoothing(0);
+
+    // Defense in depth: any scroll not initiated through Lenis (a native
+    // anchor jump, browser back/forward, an automated test's
+    // scrollIntoView) must still keep ScrollTrigger in sync, or content
+    // gated behind a ScrollTrigger reveal could end up stuck hidden.
+    window.addEventListener('scroll', () => ScrollTrigger.update(), { passive: true });
+
+    // Route in-page anchor clicks through Lenis so they're smooth AND
+    // guaranteed to keep ScrollTrigger's position tracking in sync.
+    document.addEventListener('click', (e) => {
+      const link = (e.target as HTMLElement).closest('a[href^="#"]');
+      if (!link) return;
+      const hash = link.getAttribute('href');
+      if (!hash || hash.length < 2) return;
+      e.preventDefault();
+      scrollToHash(hash);
+    });
+  }
+
+  // Custom cursor — desktop, fine-pointer, motion-safe only.
+  if (canHover && !reducedMotion) {
+    const dot = document.getElementById('cursor-dot');
+    const ring = document.getElementById('cursor-ring');
+    const label = ring?.querySelector('.cursor-label');
+
+    if (dot && ring) {
+      document.body.classList.add('custom-cursor-active');
+      gsap.set([dot, ring], { xPercent: -50, yPercent: -50 });
+
+      const dotX = gsap.quickTo(dot, 'x', { duration: 0.1, ease: 'power3.out' });
+      const dotY = gsap.quickTo(dot, 'y', { duration: 0.1, ease: 'power3.out' });
+      const ringX = gsap.quickTo(ring, 'x', { duration: 0.35, ease: 'power3.out' });
+      const ringY = gsap.quickTo(ring, 'y', { duration: 0.35, ease: 'power3.out' });
+
+      let revealed = false;
+      window.addEventListener('pointermove', (e) => {
+        dotX(e.clientX);
+        dotY(e.clientY);
+        ringX(e.clientX);
+        ringY(e.clientY);
+        if (!revealed) {
+          revealed = true;
+          dot.classList.add('is-visible');
+          ring.classList.add('is-visible');
+        }
+      });
+
+      window.addEventListener('pointerdown', () => ring.classList.add('is-pressed'));
+      window.addEventListener('pointerup', () => ring.classList.remove('is-pressed'));
+
+      const bind = () => {
+        document.querySelectorAll<HTMLElement>('[data-cursor]:not([data-cursor-bound])').forEach((el) => {
+          el.setAttribute('data-cursor-bound', 'true');
+          el.addEventListener('mouseenter', () => {
+            ring.classList.add('is-active');
+            const text = el.getAttribute('data-cursor-text');
+            if (text && label) {
+              label.textContent = text;
+              ring.classList.add('has-label');
+            }
+          });
+          el.addEventListener('mouseleave', () => {
+            ring.classList.remove('is-active', 'has-label');
+            if (label) label.textContent = '';
+          });
+        });
+      };
+
+      bind();
+      // Sections render statically at build time, but bind again after full
+      // load in case any late layout shifts the initial querySelectorAll.
+      window.addEventListener('load', bind, { once: true });
+      // Exposed for components that inject [data-cursor] elements later
+      // (e.g. the Skills tech-detail panel's connector links).
+      window.__motion.refreshCursor = bind;
+    }
+  }
+</script>
+
+<style>
+  #cursor-dot,
+  #cursor-ring {
+    position: fixed;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  #cursor-dot.is-visible,
+  #cursor-ring.is-visible {
+    opacity: 1;
+  }
+
+  #cursor-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-accent);
+  }
+
+  #cursor-ring {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s ease, width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+      height 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease,
+      border-color 0.3s ease;
+  }
+
+  #cursor-ring.is-pressed {
+    width: 28px;
+    height: 28px;
+  }
+
+  #cursor-ring.is-active {
+    width: 60px;
+    height: 60px;
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+  }
+
+  #cursor-ring.has-label {
+    width: 4.5rem;
+    height: 4.5rem;
+  }
+
+  .cursor-label {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  #cursor-ring.has-label .cursor-label {
+    opacity: 1;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    :global(body.custom-cursor-active),
+    :global(body.custom-cursor-active a),
+    :global(body.custom-cursor-active button) {
+      cursor: none;
+    }
+  }
+</style>

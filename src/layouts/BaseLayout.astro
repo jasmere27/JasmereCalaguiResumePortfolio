@@ -1,0 +1,90 @@
+---
+import '../styles/global.css';
+import { profile } from '../data/resume';
+import AmbientBackground from '../components/AmbientBackground.astro';
+import MotionRoot from '../components/MotionRoot.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = `${profile.name} — Software Developer`,
+  description = profile.tagline,
+} = Astro.props;
+
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const ogImageURL = new URL('/og-image.png', Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={canonicalURL} />
+    <meta name="generator" content={Astro.generator} />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="author" content={profile.name} />
+    <meta name="theme-color" content="#0f131b" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImageURL} />
+    <meta property="og:site_name" content={`${profile.name} — Portfolio`} />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageURL} />
+
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Person',
+      name: profile.name,
+      jobTitle: profile.title,
+      email: `mailto:${profile.email}`,
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: 'City of San Fernando',
+        addressRegion: 'Pampanga',
+        addressCountry: 'PH',
+      },
+      knowsLanguage: profile.languages,
+      description: profile.summary,
+    })} />
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to content</a>
+    <AmbientBackground />
+    <MotionRoot />
+    <slot />
+  </body>
+</html>
+
+<style>
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 100;
+    background: var(--color-accent);
+    color: var(--color-ink);
+    padding: 0.75rem 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    border-radius: 0 0 0.5rem 0;
+  }
+
+  .skip-link:focus {
+    left: 0;
+  }
+</style>

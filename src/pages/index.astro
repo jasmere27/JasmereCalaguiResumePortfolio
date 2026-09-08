@@ -1,0 +1,51 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Nav from '../components/Nav.astro';
+import Hero from '../components/Hero.astro';
+import About from '../components/About.astro';
+import Skills from '../components/Skills.astro';
+import Experience from '../components/Experience.astro';
+import Projects from '../components/Projects.astro';
+import Education from '../components/Education.astro';
+import Contact from '../components/Contact.astro';
+import Footer from '../components/Footer.astro';
+import CommandPalette from '../components/CommandPalette.astro';
+import ScrollReveals from '../components/ScrollReveals.astro';
+import AIAssistant from '../components/AIAssistant.astro';
+import CareerQuest from '../components/CareerQuest.astro';
+import Terminal from '../components/Terminal.astro';
+---
+
+<BaseLayout>
+  <Nav />
+  <div class="page-shell">
+    <main id="main" class="container-page">
+      <Hero />
+      <About />
+      <Skills />
+      <Experience />
+      <Projects />
+      <Education />
+      <CareerQuest />
+      <Terminal />
+      <Contact />
+    </main>
+    <Footer />
+  </div>
+  <CommandPalette />
+  <ScrollReveals />
+  <AIAssistant />
+</BaseLayout>
+
+<style>
+  .page-shell {
+    padding-top: 4.5rem;
+  }
+
+  @media (min-width: 64rem) {
+    .page-shell {
+      padding-top: 0;
+      margin-left: 17rem;
+    }
+  }
+</style>

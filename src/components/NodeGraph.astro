@@ -1,0 +1,105 @@
+---
+// A small schematic of how the pieces of a full-stack + AI build connect —
+// literal to the "frontend, backend, database, AI integration" claim in the
+// professional summary, not a decorative blob.
+const nodes = [
+  { id: 'fe', x: 40, y: 56, label: 'Frontend' },
+  { id: 'be', x: 210, y: 140, label: 'Backend' },
+  { id: 'db', x: 210, y: 250, label: 'Database' },
+  { id: 'ai', x: 380, y: 56, label: 'AI Agent' },
+];
+const edges = [
+  ['fe', 'be'],
+  ['be', 'db'],
+  ['be', 'ai'],
+];
+const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+---
+
+<svg
+  class="node-graph"
+  viewBox="0 0 420 300"
+  fill="none"
+  role="img"
+  aria-label="Diagram of a full-stack system: frontend, backend, and database, with an AI agent connected to the backend"
+>
+  {edges.map(([a, b]) => {
+    const from = byId[a];
+    const to = byId[b];
+    return (
+      <line
+        x1={from.x}
+        y1={from.y}
+        x2={to.x}
+        y2={to.y}
+        stroke="var(--color-border-strong)"
+        stroke-width="1.5"
+      />
+    );
+  })}
+  {nodes.map((n, i) => (
+    <g transform={`translate(${n.x}, ${n.y})`}>
+      <circle
+        r="15"
+        class="node-ring"
+        stroke={n.id === 'ai' ? 'var(--color-signal)' : 'var(--color-accent)'}
+        stroke-width="1"
+        style={`--pulse-delay: ${i * 0.6}s`}
+      />
+      <circle r="4.5" fill={n.id === 'ai' ? 'var(--color-signal)' : 'var(--color-accent)'} />
+      <text
+        y="32"
+        text-anchor="middle"
+        class="node-label"
+        fill="var(--color-text-muted)"
+      >
+        {n.label}
+      </text>
+    </g>
+  ))}
+</svg>
+
+<style>
+  .node-graph {
+    width: 100%;
+    height: auto;
+    max-width: 26rem;
+    overflow: visible;
+  }
+
+  .node-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.01em;
+  }
+
+  .node-ring {
+    opacity: 0;
+    transform-origin: center;
+    animation: pulse-ring 3.6s ease-out infinite;
+    animation-delay: var(--pulse-delay, 0s);
+  }
+
+  @keyframes pulse-ring {
+    0% {
+      opacity: 0.55;
+      transform: scale(0.4);
+    }
+    70% {
+      opacity: 0;
+      transform: scale(1.6);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.6);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .node-ring {
+      animation: none;
+      opacity: 0.35;
+      transform: scale(1);
+    }
+  }
+</style>

@@ -1,0 +1,10 @@
+# Copy this file to .dev.vars for local `wrangler pages dev` testing.
+# Never commit the real .dev.vars file or a real key.
+#
+# Without this set, /api/chat answers entirely from the local,
+# resume-grounded rule engine (src/lib/assistant.ts) — no API needed.
+#
+# To enable real AI-backed answers in production, set the same variable as
+# a secret instead of committing it anywhere:
+#   npx wrangler pages secret put ANTHROPIC_API_KEY
+ANTHROPIC_API_KEY=

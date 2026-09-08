@@ -1,0 +1,77 @@
+---
+// Centralized scroll-triggered motion for everything below the hero.
+// Single source of truth for duration/easing/stagger so the whole page
+// shares one motion language. Elements are only ever hidden by an inline
+// style GSAP sets at the moment it runs — if this script fails to load,
+// the page is simply the normal, fully visible static markup.
+---
+
+<script>
+  import { gsap } from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reducedMotion) {
+    // Content is already visible in the static markup — nothing to do.
+  } else {
+    // Batch per-section rather than page-wide: a single big jump (a fast
+    // anchor-link click, an automated scrollIntoView) can cross several
+    // sections' thresholds in one update. A page-wide batch would then
+    // stagger every element together, and content far down the DOM order
+    // — like the featured project — could inherit a multi-second delay
+    // before it visibly finishes fading in. Scoping each batch to its own
+    // section bounds the worst case to that section's own small item count.
+    document.querySelectorAll<HTMLElement>('.section').forEach((section) => {
+      const items = Array.from(section.querySelectorAll<HTMLElement>('[data-animate]'));
+      if (!items.length) return;
+      ScrollTrigger.batch(items, {
+        start: 'top 88%',
+        once: true,
+        onEnter: (batch) => {
+          gsap.from(batch, {
+            opacity: 0,
+            y: 28,
+            duration: 0.7,
+            ease: 'power3.out',
+            stagger: { each: 0.08, from: 'start' },
+          });
+        },
+      });
+    });
+
+    const maskEls = gsap.utils.toArray<HTMLElement>('.mask-reveal-inner');
+    maskEls.forEach((el) => {
+      gsap.fromTo(
+        el,
+        { yPercent: 112 },
+        {
+          yPercent: 0,
+          duration: 0.85,
+          ease: 'power4.out',
+          scrollTrigger: { trigger: el, start: 'top 92%', once: true },
+        }
+      );
+    });
+
+    // Safety net: a jump that lands exactly between two ScrollTrigger
+    // recalculations, a font-swap reflow, or any other edge case we haven't
+    // hit yet should never leave content stuck mid-fade. Force everything
+    // to its resting state a couple of seconds after it first became
+    // reachable, whether or not its own trigger ever fired.
+    window.setTimeout(() => {
+      const animated = document.querySelectorAll<HTMLElement>('[data-animate]');
+      animated.forEach((el) => {
+        if (Number(gsap.getProperty(el, 'opacity')) < 1) {
+          gsap.to(el, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out', clearProps: 'transform' });
+        }
+      });
+      maskEls.forEach((el) => {
+        if (Number(gsap.getProperty(el, 'yPercent')) !== 0) {
+          gsap.to(el, { yPercent: 0, duration: 0.4, ease: 'power2.out' });
+        }
+      });
+    }, 2500);
+  }
+</script>
