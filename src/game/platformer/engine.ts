@@ -168,7 +168,7 @@ type Palette = {
 
 function readPalette(): Palette {
   const cs = getComputedStyle(document.documentElement);
-  const v = (name: string) => cs.getPropertyValue(name).trim() || '#e8a23d';
+  const v = (name: string) => cs.getPropertyValue(name).trim() || '#a78bfa';
   return {
     ink: v('--color-ink'),
     surface: v('--color-surface'),

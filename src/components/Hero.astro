@@ -1,6 +1,6 @@
 ---
 import { profile, experience, projects, skills, certifications } from '../data/resume';
-import HeroOrbit from './HeroOrbit.astro';
+import HeroCrystal from './HeroCrystal.astro';
 
 const totalTechnologies = skills.reduce((sum, group) => sum + group.items.length, 0);
 
@@ -12,10 +12,35 @@ const stats = [
 ];
 
 const nameWords = profile.name.split(' ');
+
+// Gradient-highlight a real phrase already in the resume data rather than
+// writing new marketing copy — "AI-Integrated" is an exact substring of
+// profile.subtitle.
+const [subtitleBefore, subtitleAfter] = profile.subtitle.split('AI-Integrated');
 ---
 
 <section class="hero" aria-label="Introduction" id="hero">
   <div class="hero-glow" aria-hidden="true"></div>
+  <svg class="hero-wave hero-wave-left" viewBox="0 0 400 500" aria-hidden="true" preserveAspectRatio="none">
+    <path d="M-20,60 C 80,120 40,220 140,260 S 60,420 160,470" stroke="url(#wave-violet)" stroke-width="1.5" fill="none" />
+    <circle cx="140" cy="260" r="3" fill="var(--color-accent)" />
+    <defs>
+      <linearGradient id="wave-violet" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--color-accent)" stop-opacity="0.5" />
+        <stop offset="100%" stop-color="var(--color-accent)" stop-opacity="0" />
+      </linearGradient>
+    </defs>
+  </svg>
+  <svg class="hero-wave hero-wave-right" viewBox="0 0 400 500" aria-hidden="true" preserveAspectRatio="none">
+    <path d="M420,80 C 320,140 360,240 260,280 S 340,430 250,480" stroke="url(#wave-teal)" stroke-width="1.5" fill="none" />
+    <circle cx="260" cy="280" r="3" fill="var(--color-signal)" />
+    <defs>
+      <linearGradient id="wave-teal" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--color-signal)" stop-opacity="0.5" />
+        <stop offset="100%" stop-color="var(--color-signal)" stop-opacity="0" />
+      </linearGradient>
+    </defs>
+  </svg>
 
   <div class="hero-inner">
     <div class="hero-copy">
@@ -25,26 +50,27 @@ const nameWords = profile.name.split(' ');
           <span class="word-mask"><span class="word-mask-inner">{word}</span></span>
         ))}
       </h1>
-      <p class="hero-role">{profile.subtitle}</p>
+      <p class="hero-role">{subtitleBefore}<span class="gradient-text">AI-Integrated</span>{subtitleAfter}</p>
       <p class="hero-tagline text-balance">{profile.tagline}</p>
 
       <div class="hero-actions">
         <a href="#contact" class="btn btn-primary" data-cursor>Contact me</a>
         <a href="#projects" class="btn btn-ghost" data-cursor>View my projects</a>
       </div>
-
-      <dl class="hero-stats">
-        {stats.map((s) => (
-          <div class="hero-stat">
-            <dt class="hero-stat-value" data-count={s.value}>{s.value}</dt>
-            <dd class="hero-stat-label">{s.label}</dd>
-          </div>
-        ))}
-      </dl>
     </div>
 
     <div class="hero-visual">
-      <HeroOrbit />
+      <div class="hero-showcase">
+        <div class="hero-crystal-slot"><HeroCrystal /></div>
+        <ul class="float-cards">
+          {stats.map((s) => (
+            <li class="float-card">
+              <span class="float-card-value" data-count={s.value}>{s.value}</span>
+              <span class="float-card-label">{s.label}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   </div>
 </section>
@@ -58,26 +84,28 @@ const nameWords = profile.name.split(' ');
 
   // Cinematic entrance. Every hidden starting state below is set by this
   // script and only this script — if it never runs, the hero renders in its
-  // normal, fully visible static layout.
+  // normal, fully visible static layout. Tuned to fully resolve in ~1.5s
+  // (down from ~2.4s) so the primary CTA settles quickly rather than lagging
+  // behind the rest of the site's snappier motion language.
   if (!reducedMotion) {
     gsap.set('.word-mask-inner', { yPercent: 112 });
     gsap.set(
-      ['.hero-kicker', '.hero-role', '.hero-tagline', '.hero-actions .btn', '.hero-stats', '.hero-visual'],
-      { opacity: 0, y: 16 }
+      ['.hero-kicker', '.hero-role', '.hero-tagline', '.hero-actions .btn', '.hero-visual', '.float-card'],
+      { opacity: 0, y: 14 }
     );
 
-    const tl = gsap.timeline({ delay: 0.2, defaults: { ease: 'power3.out', duration: 0.7 } });
+    const tl = gsap.timeline({ delay: 0.15, defaults: { ease: 'power3.out', duration: 0.5 } });
     tl.to('.hero-kicker', { opacity: 1, y: 0 })
       .to(
         '.word-mask-inner',
-        { yPercent: 0, duration: 0.9, ease: 'power4.out', stagger: 0.09 },
-        '-=0.35'
+        { yPercent: 0, duration: 0.65, ease: 'power4.out', stagger: 0.06 },
+        '-=0.3'
       )
-      .to('.hero-role', { opacity: 1, y: 0 }, '-=0.55')
-      .to('.hero-tagline', { opacity: 1, y: 0 }, '-=0.5')
-      .to('.hero-visual', { opacity: 1, y: 0, duration: 0.9 }, '-=0.5')
-      .to('.hero-actions .btn', { opacity: 1, y: 0, stagger: 0.1 }, '-=0.7')
-      .to('.hero-stats', { opacity: 1, y: 0 }, '-=0.5');
+      .to('.hero-role', { opacity: 1, y: 0 }, '-=0.4')
+      .to('.hero-tagline', { opacity: 1, y: 0 }, '-=0.35')
+      .to('.hero-actions .btn', { opacity: 1, y: 0, stagger: 0.07 }, '-=0.3')
+      .to('.hero-visual', { opacity: 1, y: 0, duration: 0.6 }, '-=0.35')
+      .to('.float-card', { opacity: 1, y: 0, stagger: 0.06 }, '-=0.35');
   }
 
   // Cursor-reactive spotlight glow — desktop, fine-pointer only.
@@ -99,7 +127,7 @@ const nameWords = profile.name.split(' ');
   // Count-up stats. The DOM already holds the correct final number, so if
   // this never runs (no JS, reduced motion) the real value is always shown.
   if (!reducedMotion) {
-    const statEls = document.querySelectorAll<HTMLElement>('.hero-stat-value');
+    const statEls = document.querySelectorAll<HTMLElement>('.float-card-value');
     const animate = (el: HTMLElement) => {
       const target = Number(el.dataset.count);
       if (!Number.isFinite(target)) return;
@@ -227,34 +255,126 @@ const nameWords = profile.name.split(' ');
     margin-top: 2.25rem;
   }
 
-  .hero-stats {
-    position: relative;
-    z-index: 1;
-    margin-top: 3rem;
-    padding-top: 2rem;
-    border-top: 1px solid var(--color-border);
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem 1rem;
+  .gradient-text {
+    background: linear-gradient(90deg, var(--color-accent), var(--color-signal));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
-  .hero-stat-value {
+  .hero-wave {
+    position: absolute;
+    top: 0;
+    width: 22rem;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.7;
+    display: none;
+  }
+
+  .hero-wave-left {
+    left: -6rem;
+  }
+
+  .hero-wave-right {
+    right: -6rem;
+  }
+
+  @media (min-width: 64rem) {
+    .hero-wave {
+      display: block;
+    }
+  }
+
+  .hero-showcase {
+    position: relative;
+    width: 100%;
+    max-width: 22rem;
+    margin-inline: auto;
+  }
+
+  .hero-crystal-slot {
+    position: relative;
+    z-index: 1;
+  }
+
+  .float-cards {
+    margin-top: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .float-card {
+    padding: 0.85rem 1rem;
+    background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 0.65rem;
+    box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+  }
+
+  .float-card-value {
+    display: block;
     font-family: var(--font-display);
-    font-size: clamp(1.6rem, 1.4rem + 1vw, 2.1rem);
+    font-size: clamp(1.35rem, 1.2rem + 0.6vw, 1.6rem);
     font-weight: 600;
     color: var(--color-accent);
     font-variant-numeric: tabular-nums;
   }
 
-  .hero-stat-label {
-    margin-top: 0.25rem;
-    font-size: 0.82rem;
+  .float-card-label {
+    margin-top: 0.2rem;
+    display: block;
+    font-size: 0.72rem;
     color: var(--color-text-faint);
   }
 
-  @media (min-width: 30rem) {
-    .hero-stats {
-      grid-template-columns: repeat(4, 1fr);
+  @media (min-width: 40rem) {
+    .hero-showcase {
+      max-width: none;
+      height: 24rem;
+    }
+
+    .hero-crystal-slot {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .float-cards {
+      position: absolute;
+      inset: 0;
+      display: block;
+      margin-top: 0;
+    }
+
+    .float-card {
+      position: absolute;
+      width: 8.5rem;
+    }
+
+    .float-card:nth-child(1) {
+      top: 0;
+      left: 0;
+    }
+
+    .float-card:nth-child(2) {
+      top: 1rem;
+      right: 0;
+    }
+
+    .float-card:nth-child(3) {
+      bottom: 1rem;
+      left: 0.5rem;
+    }
+
+    .float-card:nth-child(4) {
+      bottom: 0;
+      right: 0.5rem;
     }
   }
 
@@ -266,10 +386,6 @@ const nameWords = profile.name.split(' ');
 
     .hero-tagline {
       max-width: 38rem;
-    }
-
-    .hero-stats {
-      margin-top: 3.5rem;
     }
   }
 </style>

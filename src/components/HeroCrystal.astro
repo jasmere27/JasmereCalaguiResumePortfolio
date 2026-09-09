@@ -1,0 +1,106 @@
+---
+// A faceted, gem-like centerpiece for the hero — built as flat-shaded SVG
+// polygons (a classic "low-poly" technique), not a WebGL/3D-engine scene.
+// Keeps the visual weight the redesign calls for without a new heavy
+// dependency or GPU cost beyond a single CSS drop-shadow.
+const CX = 120;
+const TOP_Y = 12;
+const GIRDLE_Y = 138;
+const BOTTOM_Y = 292;
+const RX = 96;
+const RY = 40;
+const FACETS = 7;
+
+const girdle = Array.from({ length: FACETS }, (_, i) => {
+  const angle = (i / FACETS) * Math.PI * 2 - Math.PI / 2;
+  return {
+    x: Number((CX + RX * Math.cos(angle)).toFixed(1)),
+    y: Number((GIRDLE_Y + RY * Math.sin(angle)).toFixed(1)),
+  };
+});
+
+const crownFacets = girdle.map((p, i) => {
+  const next = girdle[(i + 1) % FACETS];
+  return { points: `${CX},${TOP_Y} ${p.x},${p.y} ${next.x},${next.y}`, shade: i % 2 };
+});
+
+const pavilionFacets = girdle.map((p, i) => {
+  const next = girdle[(i + 1) % FACETS];
+  return { points: `${CX},${BOTTOM_Y} ${p.x},${p.y} ${next.x},${next.y}`, shade: (i + 1) % 2 };
+});
+---
+
+<div class="hero-crystal" aria-hidden="true">
+  <svg viewBox="0 0 240 300" fill="none">
+    <defs>
+      <linearGradient id="facet-light" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#c4b5fd" />
+        <stop offset="100%" stop-color="var(--color-accent)" />
+      </linearGradient>
+      <linearGradient id="facet-dark" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="var(--color-accent-dim)" />
+        <stop offset="100%" stop-color="#3a2266" />
+      </linearGradient>
+      <linearGradient id="facet-teal" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0%" stop-color="var(--color-accent-dim)" />
+        <stop offset="100%" stop-color="var(--color-signal)" />
+      </linearGradient>
+    </defs>
+
+    <g class="crystal-spin">
+      {crownFacets.map((f, i) => (
+        <polygon
+          points={f.points}
+          fill={i === 0 ? 'url(#facet-teal)' : f.shade ? 'url(#facet-dark)' : 'url(#facet-light)'}
+          stroke="var(--color-ink)"
+          stroke-width="1.5"
+        />
+      ))}
+      {pavilionFacets.map((f) => (
+        <polygon
+          points={f.points}
+          fill={f.shade ? 'url(#facet-dark)' : 'url(#facet-light)'}
+          stroke="var(--color-ink)"
+          stroke-width="1.5"
+          opacity="0.92"
+        />
+      ))}
+    </g>
+  </svg>
+</div>
+
+<script>
+  import { gsap } from 'gsap';
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const spin = document.querySelector<SVGGElement>('.crystal-spin');
+
+  // A gentle sway + bob rather than a full spin — a real gem's facets
+  // aren't rotationally symmetric, so a continuous 360deg turn would flash
+  // oddly each time an asymmetric face swept past. This reads as "suspended
+  // and slowly turning" without ever looking broken.
+  if (spin && !reducedMotion) {
+    const tl = gsap.timeline({ repeat: -1, yoyo: true, defaults: { ease: 'sine.inOut', duration: 5 } });
+    tl.to(spin, { rotateY: 18, rotateZ: 3, y: -8 }, 0);
+    gsap.set(spin, { transformOrigin: '120px 150px' });
+  }
+</script>
+
+<style>
+  .hero-crystal {
+    width: 100%;
+    max-width: 15rem;
+    margin-inline: auto;
+    filter: drop-shadow(0 0 48px var(--color-accent-soft)) drop-shadow(0 18px 32px rgba(0, 0, 0, 0.35));
+  }
+
+  .hero-crystal svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .crystal-spin {
+    transform-box: fill-box;
+  }
+</style>
