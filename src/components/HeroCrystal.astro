@@ -28,9 +28,11 @@ const pavilionFacets = girdle.map((p, i) => {
   const next = girdle[(i + 1) % FACETS];
   return { points: `${CX},${BOTTOM_Y} ${p.x},${p.y} ${next.x},${next.y}`, shade: (i + 1) % 2 };
 });
+const CENTER_Y = (TOP_Y + BOTTOM_Y) / 2;
 ---
 
-<div class="hero-crystal" aria-hidden="true">
+<div class="hero-crystal" aria-hidden="true" data-cx={CX} data-cy={CENTER_Y}>
+  <div class="hero-crystal-burst"></div>
   <svg viewBox="0 0 240 300" fill="none">
     <defs>
       <linearGradient id="facet-light" x1="0" y1="0" x2="1" y2="1">
@@ -71,9 +73,20 @@ const pavilionFacets = girdle.map((p, i) => {
 
 <script>
   import { gsap } from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  gsap.registerPlugin(ScrollTrigger);
+
+  // Prefer the site-wide motion/reduced-motion state MotionRoot already
+  // derived (it runs earlier in document order, in BaseLayout, ahead of
+  // any section content) — fall back to a direct check only if that
+  // singleton somehow isn't there yet.
+  const motion = (window as unknown as { __motion?: { reducedMotion: boolean } }).__motion;
+  const reducedMotion = motion?.reducedMotion ?? window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const root = document.querySelector<HTMLElement>('.hero-crystal');
   const spin = document.querySelector<SVGGElement>('.crystal-spin');
+  const burst = document.querySelector<HTMLElement>('.hero-crystal-burst');
 
   // A gentle sway + bob rather than a full spin — a real gem's facets
   // aren't rotationally symmetric, so a continuous 360deg turn would flash
@@ -84,10 +97,75 @@ const pavilionFacets = girdle.map((p, i) => {
     tl.to(spin, { rotateY: 18, rotateZ: 3, y: -8 }, 0);
     gsap.set(spin, { transformOrigin: '120px 150px' });
   }
+
+  // Shatter on scroll: each facet flies outward along the line from the
+  // crystal's own center through that facet's center — a real explosion
+  // radiates from a point, so this reads as physically coherent rather than
+  // arbitrary jitter, without pulling in a physics engine for it.
+  //
+  // Trigger is the crystal's own element, not the whole hero section: the
+  // crystal sits above the section's vertical middle, so it scrolls out of
+  // the viewport's top edge well before the hero's bottom does. Tying the
+  // range to `#hero` measured the shatter against the wrong distance — most
+  // of it played out after the crystal was already off-screen. Using the
+  // crystal itself as the trigger means "top top" -> "bottom top" covers
+  // exactly the distance during which it's passing through the top of the
+  // viewport, so the break-apart is fully visible while it happens, and
+  // reverses for free if the visitor scrolls back up.
+  if (root && spin && !reducedMotion) {
+    const cx = Number(root.dataset.cx);
+    const cy = Number(root.dataset.cy);
+    const facets = Array.from(spin.querySelectorAll<SVGPolygonElement>('polygon'));
+
+    const vectors = facets.map((facet) => {
+      const box = facet.getBBox();
+      const fx = box.x + box.width / 2;
+      const fy = box.y + box.height / 2;
+      const dx = fx - cx;
+      const dy = fy - cy;
+      const dist = Math.hypot(dx, dy) || 1;
+      const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
+      // Crown facets (near the top point) are smaller and lighter-looking —
+      // sending them a bit further than the broader pavilion facets keeps
+      // the burst from reading as one flat ring expanding outward.
+      const throwDistance = fy < cy ? 130 : 95;
+      return {
+        x: (dx / dist) * throwDistance,
+        y: (dy / dist) * throwDistance,
+        rotate: angleDeg * 0.5,
+      };
+    });
+
+    gsap.set(facets, { transformOrigin: '50% 50%' });
+
+    // A fixed distance rather than "bottom top": the crystal's own rendered
+    // height (~240-300px) would make the whole break-apart resolve within a
+    // single quick scroll gesture. Stretching it over more scroll distance
+    // makes it something a visitor actually sees happen, not a flicker.
+    const scrollTriggerConfig = { trigger: root, start: 'top top', end: '+=450', scrub: 0.4 };
+
+    gsap.to(facets, {
+      x: (i) => vectors[i].x,
+      y: (i) => vectors[i].y,
+      rotate: (i) => vectors[i].rotate,
+      opacity: 0.08,
+      stagger: 0.025,
+      ease: 'power1.in',
+      scrollTrigger: scrollTriggerConfig,
+    });
+
+    if (burst) {
+      gsap
+        .timeline({ scrollTrigger: scrollTriggerConfig })
+        .to(burst, { opacity: 0.85, scale: 1.35, duration: 0.5, ease: 'power1.out' })
+        .to(burst, { opacity: 0, scale: 1.7, duration: 0.5, ease: 'power1.in' });
+    }
+  }
 </script>
 
 <style>
   .hero-crystal {
+    position: relative;
     width: 100%;
     max-width: 15rem;
     margin-inline: auto;
@@ -95,6 +173,7 @@ const pavilionFacets = girdle.map((p, i) => {
   }
 
   .hero-crystal svg {
+    position: relative;
     width: 100%;
     height: auto;
     overflow: visible;
@@ -102,5 +181,18 @@ const pavilionFacets = girdle.map((p, i) => {
 
   .crystal-spin {
     transform-box: fill-box;
+  }
+
+  /* Starts fully transparent — only the shatter scroll-tween (gated behind
+     prefers-reduced-motion in the script) ever raises its opacity above 0,
+     so a visitor who never triggers that path never sees a stray glow. */
+  .hero-crystal-burst {
+    position: absolute;
+    inset: 15% 10%;
+    z-index: -1;
+    opacity: 0;
+    border-radius: 999px;
+    background: radial-gradient(circle, var(--color-accent-soft), var(--color-signal-soft) 55%, transparent 75%);
+    pointer-events: none;
   }
 </style>
