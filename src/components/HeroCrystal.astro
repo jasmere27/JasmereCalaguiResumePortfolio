@@ -3,32 +3,73 @@
 // polygons (a classic "low-poly" technique), not a WebGL/3D-engine scene.
 // Keeps the visual weight the redesign calls for without a new heavy
 // dependency or GPU cost beyond a single CSS drop-shadow.
+//
+// Geometry is deliberately irregular (small per-vertex jitter) rather than a
+// perfect bipyramid — a flawless geometric solid reads as a generic 3D icon;
+// slightly uneven facet edges read as an actual mineral specimen.
 const CX = 120;
-const TOP_Y = 12;
-const GIRDLE_Y = 138;
-const BOTTOM_Y = 292;
+const TOP_Y = 10;
+const GIRDLE_Y = 136;
+const BOTTOM_Y = 294;
 const RX = 96;
-const RY = 40;
-const FACETS = 7;
+const RY = 42;
+const FACETS = 9;
+
+// Deterministic pseudo-random in [-1, 1), seeded by index — irregular but
+// reproducible on every render (server and client agree, and a page reload
+// doesn't reshuffle the shape).
+function jitter(seed: number): number {
+  const x = Math.sin(seed * 12.9898) * 43758.5453;
+  return ((x - Math.floor(x)) - 0.5) * 2;
+}
 
 const girdle = Array.from({ length: FACETS }, (_, i) => {
   const angle = (i / FACETS) * Math.PI * 2 - Math.PI / 2;
+  const rx = RX * (1 + jitter(i * 2.1) * 0.09);
+  const ry = RY * (1 + jitter(i * 3.7) * 0.12);
   return {
-    x: Number((CX + RX * Math.cos(angle)).toFixed(1)),
-    y: Number((GIRDLE_Y + RY * Math.sin(angle)).toFixed(1)),
+    x: Number((CX + rx * Math.cos(angle)).toFixed(1)),
+    y: Number((GIRDLE_Y + ry * Math.sin(angle) + jitter(i * 5.3) * 4).toFixed(1)),
   };
 });
 
+type Grad = 'light' | 'dark' | 'teal' | 'highlight';
+
 const crownFacets = girdle.map((p, i) => {
   const next = girdle[(i + 1) % FACETS];
-  return { points: `${CX},${TOP_Y} ${p.x},${p.y} ${next.x},${next.y}`, shade: i % 2 };
+  const apexX = CX + jitter(i * 1.3) * 3;
+  const apexY = TOP_Y + jitter(i * 1.9) * 2;
+  let grad: Grad = i % 2 ? 'dark' : 'light';
+  if (i === 0) grad = 'teal';
+  if (i === 2) grad = 'highlight';
+  return { pts: [[apexX, apexY], [p.x, p.y], [next.x, next.y]] as [number, number][], grad };
 });
 
 const pavilionFacets = girdle.map((p, i) => {
   const next = girdle[(i + 1) % FACETS];
-  return { points: `${CX},${BOTTOM_Y} ${p.x},${p.y} ${next.x},${next.y}`, shade: (i + 1) % 2 };
+  const apexX = CX + jitter(i * 2.7 + 9) * 3;
+  const apexY = BOTTOM_Y + jitter(i * 3.1 + 9) * 2;
+  const grad: Grad = (i + 1) % 2 ? 'dark' : 'light';
+  return { pts: [[apexX, apexY], [p.x, p.y], [next.x, next.y]] as [number, number][], grad };
 });
+
+const GRADIENT_URL: Record<Grad, string> = {
+  light: 'url(#facet-light)',
+  dark: 'url(#facet-dark)',
+  teal: 'url(#facet-teal)',
+  highlight: 'url(#facet-highlight)',
+};
+
 const CENTER_Y = (TOP_Y + BOTTOM_Y) / 2;
+
+// Server-computed geometry, handed to the client script via the codebase's
+// established JSON-script pattern (never define:vars) — one source of truth
+// for facet shape, shared by the resting SVG render below and the shard
+// particles the script builds for the scroll-shatter.
+const facetsForClient = [...crownFacets, ...pavilionFacets].map((f) => ({
+  points: f.pts,
+  grad: f.grad,
+}));
 ---
 
 <div class="hero-crystal" aria-hidden="true" data-cx={CX} data-cy={CENTER_Y}>
@@ -47,21 +88,25 @@ const CENTER_Y = (TOP_Y + BOTTOM_Y) / 2;
         <stop offset="0%" stop-color="var(--color-accent-dim)" />
         <stop offset="100%" stop-color="var(--color-signal)" />
       </linearGradient>
+      <linearGradient id="facet-highlight" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#f5f3ff" />
+        <stop offset="100%" stop-color="#c4b5fd" />
+      </linearGradient>
     </defs>
 
     <g class="crystal-spin">
-      {crownFacets.map((f, i) => (
+      {crownFacets.map((f) => (
         <polygon
-          points={f.points}
-          fill={i === 0 ? 'url(#facet-teal)' : f.shade ? 'url(#facet-dark)' : 'url(#facet-light)'}
+          points={f.pts.map((p) => p.join(',')).join(' ')}
+          fill={GRADIENT_URL[f.grad]}
           stroke="var(--color-ink)"
           stroke-width="1.5"
         />
       ))}
       {pavilionFacets.map((f) => (
         <polygon
-          points={f.points}
-          fill={f.shade ? 'url(#facet-dark)' : 'url(#facet-light)'}
+          points={f.pts.map((p) => p.join(',')).join(' ')}
+          fill={GRADIENT_URL[f.grad]}
           stroke="var(--color-ink)"
           stroke-width="1.5"
           opacity="0.92"
@@ -71,11 +116,29 @@ const CENTER_Y = (TOP_Y + BOTTOM_Y) / 2;
   </svg>
 </div>
 
+<script type="application/json" id="crystal-facets-data" is:inline set:html={JSON.stringify(facetsForClient)} />
+
 <script>
   import { gsap } from 'gsap';
   import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
   gsap.registerPlugin(ScrollTrigger);
+
+  type Grad = 'light' | 'dark' | 'teal' | 'highlight';
+  type FacetData = { points: [number, number][]; grad: Grad };
+
+  // CSS-gradient equivalents of this component's four SVG <linearGradient>
+  // defs — necessarily redefined here rather than shared with the
+  // frontmatter: the shard particles below are plain divs (their
+  // `background` can't reference an SVG gradient by url()), and this script
+  // runs in the browser, the frontmatter only at build time, so there's no
+  // single runtime value to import from one into the other.
+  const CSS_GRADIENT: Record<Grad, string> = {
+    light: 'linear-gradient(135deg, #c4b5fd, var(--color-accent))',
+    dark: 'linear-gradient(135deg, var(--color-accent-dim), #3a2266)',
+    teal: 'linear-gradient(135deg, var(--color-accent-dim), var(--color-signal))',
+    highlight: 'linear-gradient(135deg, #f5f3ff, var(--color-accent-hover, #c4b5fd))',
+  };
 
   // Prefer the site-wide motion/reduced-motion state MotionRoot already
   // derived (it runs earlier in document order, in BaseLayout, ahead of
@@ -85,6 +148,7 @@ const CENTER_Y = (TOP_Y + BOTTOM_Y) / 2;
   const reducedMotion = motion?.reducedMotion ?? window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const root = document.querySelector<HTMLElement>('.hero-crystal');
+  const crystalSvg = root?.querySelector<SVGSVGElement>('svg') ?? null;
   const spin = document.querySelector<SVGGElement>('.crystal-spin');
   const burst = document.querySelector<HTMLElement>('.hero-crystal-burst');
 
@@ -98,65 +162,159 @@ const CENTER_Y = (TOP_Y + BOTTOM_Y) / 2;
     gsap.set(spin, { transformOrigin: '120px 150px' });
   }
 
-  // Shatter on scroll: each facet flies outward along the line from the
-  // crystal's own center through that facet's center — a real explosion
-  // radiates from a point, so this reads as physically coherent rather than
-  // arbitrary jitter, without pulling in a physics engine for it.
+  // Shatter on scroll: real, page-roaming glass shards rather than the
+  // crystal's own SVG polygons nudging a few dozen pixels within their own
+  // small container. Each facet is rebuilt as an independent `position:
+  // fixed` div — clipped to that facet's exact triangle via `clip-path`,
+  // colored with a CSS-gradient match of its SVG fill — anchored at the
+  // crystal's real on-screen position, then flown out across the whole
+  // viewport. `position: fixed` is what makes "around the page" possible at
+  // all: an element confined to the crystal's own small stacking context
+  // can't travel further than that box regardless of transform distance.
   //
-  // Trigger is the crystal's own element, not the whole hero section: the
-  // crystal sits above the section's vertical middle, so it scrolls out of
-  // the viewport's top edge well before the hero's bottom does. Tying the
-  // range to `#hero` measured the shatter against the wrong distance — most
-  // of it played out after the crystal was already off-screen. Using the
-  // crystal itself as the trigger means "top top" -> "bottom top" covers
-  // exactly the distance during which it's passing through the top of the
-  // viewport, so the break-apart is fully visible while it happens, and
-  // reverses for free if the visitor scrolls back up.
-  if (root && spin && !reducedMotion) {
-    const cx = Number(root.dataset.cx);
-    const cy = Number(root.dataset.cy);
-    const facets = Array.from(spin.querySelectorAll<SVGPolygonElement>('polygon'));
+  // The original inline SVG and the shard layer are never both visible at
+  // once — one GSAP tween's onUpdate drives both from the same progress
+  // value, so there's no separate "reset" state that could drift out of
+  // sync (the exact bug class a naive duplicate-element effect invites).
+  if (root && crystalSvg && !reducedMotion) {
+    const dataEl = document.getElementById('crystal-facets-data');
+    const facets: FacetData[] = dataEl ? JSON.parse(dataEl.textContent || '[]') : [];
 
-    const vectors = facets.map((facet) => {
-      const box = facet.getBBox();
-      const fx = box.x + box.width / 2;
-      const fy = box.y + box.height / 2;
-      const dx = fx - cx;
-      const dy = fy - cy;
-      const dist = Math.hypot(dx, dy) || 1;
-      const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
-      // Crown facets (near the top point) are smaller and lighter-looking —
-      // sending them a bit further than the broader pavilion facets keeps
-      // the burst from reading as one flat ring expanding outward.
-      const throwDistance = fy < cy ? 130 : 95;
-      return {
-        x: (dx / dist) * throwDistance,
-        y: (dy / dist) * throwDistance,
-        rotate: angleDeg * 0.5,
-      };
+    const layer = document.createElement('div');
+    layer.className = 'crystal-shard-layer';
+    layer.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(layer);
+
+    const shards: HTMLElement[] = [];
+    const dust: HTMLElement[] = [];
+    // Screen-pixel vectors, recomputed on resize since they're derived from
+    // getBoundingClientRect — a fixed-position layout, so stale values after
+    // a viewport resize would visibly misalign the shards from the crystal.
+    let vectors: { x: number; y: number; rotate: number }[] = [];
+    let dustVectors: { x: number; y: number; rotate: number }[] = [];
+
+    facets.forEach((facet) => {
+      const shard = document.createElement('div');
+      shard.className = 'crystal-shard';
+      shard.style.background = CSS_GRADIENT[facet.grad];
+      layer.appendChild(shard);
+      shards.push(shard);
     });
 
-    gsap.set(facets, { transformOrigin: '50% 50%' });
+    const DUST_COUNT = 18;
+    for (let i = 0; i < DUST_COUNT; i++) {
+      const d = document.createElement('div');
+      d.className = 'crystal-dust';
+      d.style.background = i % 2 ? 'var(--color-signal)' : 'var(--color-accent)';
+      const size = 3 + ((i * 37) % 6);
+      d.style.width = `${size}px`;
+      d.style.height = `${size}px`;
+      layer.appendChild(d);
+      dust.push(d);
+    }
+
+    function layout(): void {
+      if (!crystalSvg) return;
+      const rect = crystalSvg.getBoundingClientRect();
+      const scaleX = rect.width / 240;
+      const scaleY = rect.height / 300;
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
+
+      vectors = facets.map((facet, i) => {
+        const shard = shards[i];
+        const xs = facet.points.map((p) => p[0]);
+        const ys = facet.points.map((p) => p[1]);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+
+        shard.style.left = `${rect.left + minX * scaleX}px`;
+        shard.style.top = `${rect.top + minY * scaleY}px`;
+        shard.style.width = `${(maxX - minX) * scaleX}px`;
+        shard.style.height = `${(maxY - minY) * scaleY}px`;
+        shard.style.clipPath = `polygon(${facet.points
+          .map((p) => `${((p[0] - minX) / (maxX - minX)) * 100}% ${((p[1] - minY) / (maxY - minY)) * 100}%`)
+          .join(', ')})`;
+
+        const fx = rect.left + ((minX + maxX) / 2) * scaleX;
+        const fy = rect.top + ((minY + maxY) / 2) * scaleY;
+        const dx = fx - (rect.left + cx);
+        const dy = fy - (rect.top + cy);
+        const dist = Math.hypot(dx, dy) || 1;
+        const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
+        // A real explosion has variety in how far pieces travel, not just
+        // direction — the smaller crown facets (near the point) go furthest,
+        // broader pavilion facets lag slightly, so the burst reads as
+        // volume dispersing rather than a flat ring expanding.
+        const isCrown = i < facets.length / 2;
+        const throwDistance = (isCrown ? 340 : 240) + ((i * 53) % 140);
+        return {
+          x: (dx / dist) * throwDistance,
+          y: (dy / dist) * throwDistance,
+          rotate: angleDeg * 0.6 + (i % 2 ? 130 : -130),
+        };
+      });
+
+      dustVectors = dust.map((d, i) => {
+        const angle = (i / DUST_COUNT) * Math.PI * 2 + i;
+        d.style.left = `${rect.left + cx}px`;
+        d.style.top = `${rect.top + cy}px`;
+        const throwDistance = 200 + ((i * 71) % 380);
+        return {
+          x: Math.cos(angle) * throwDistance,
+          y: Math.sin(angle) * throwDistance,
+          rotate: 90 + ((i * 47) % 360),
+        };
+      });
+    }
+
+    layout();
+    window.addEventListener('resize', layout);
+
+    gsap.set([...shards, ...dust], { opacity: 0 });
 
     // A fixed distance rather than "bottom top": the crystal's own rendered
     // height (~240-300px) would make the whole break-apart resolve within a
     // single quick scroll gesture. Stretching it over more scroll distance
     // makes it something a visitor actually sees happen, not a flicker.
-    const scrollTriggerConfig = { trigger: root, start: 'top top', end: '+=450', scrub: 0.4 };
+    const scrollTriggerConfig = {
+      trigger: root,
+      start: 'top top',
+      end: '+=650',
+      scrub: 0.4,
+      onUpdate: (self: ScrollTrigger) => {
+        // Cross-fade the real SVG and the shard field over the first ~12% of
+        // the range — brief enough to read as instantaneous, long enough to
+        // avoid a hard visual pop between the two.
+        const swap = Math.min(self.progress / 0.12, 1);
+        gsap.set(root, { opacity: 1 - swap });
+        gsap.set([...shards, ...dust], { opacity: swap * 0.95 });
+      },
+    };
 
-    gsap.to(facets, {
+    gsap.to(shards, {
       x: (i) => vectors[i].x,
       y: (i) => vectors[i].y,
       rotate: (i) => vectors[i].rotate,
-      opacity: 0.08,
-      stagger: 0.025,
+      stagger: 0.02,
       ease: 'power1.in',
       scrollTrigger: scrollTriggerConfig,
     });
 
+    gsap.to(dust, {
+      x: (i) => dustVectors[i].x,
+      y: (i) => dustVectors[i].y,
+      rotate: (i) => dustVectors[i].rotate,
+      stagger: 0.015,
+      ease: 'power1.in',
+      scrollTrigger: { ...scrollTriggerConfig, onUpdate: undefined },
+    });
+
     if (burst) {
       gsap
-        .timeline({ scrollTrigger: scrollTriggerConfig })
+        .timeline({ scrollTrigger: { ...scrollTriggerConfig, onUpdate: undefined } })
         .to(burst, { opacity: 0.85, scale: 1.35, duration: 0.5, ease: 'power1.out' })
         .to(burst, { opacity: 0, scale: 1.7, duration: 0.5, ease: 'power1.in' });
     }
@@ -194,5 +352,33 @@ const CENTER_Y = (TOP_Y + BOTTOM_Y) / 2;
     border-radius: 999px;
     background: radial-gradient(circle, var(--color-accent-soft), var(--color-signal-soft) 55%, transparent 75%);
     pointer-events: none;
+  }
+</style>
+
+<style is:global>
+  /* The shard/dust layer is appended to <body> at runtime (see script
+     above), outside this component's own DOM subtree — Astro's scoped
+     styles can't reach it, same reason the case-study and game overlays
+     (pcs-/pf-/cq- prefixes elsewhere in this codebase) use a global style
+     block for their runtime-built markup. Namespaced with crystal-. */
+  .crystal-shard-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .crystal-shard {
+    position: fixed;
+    will-change: transform, opacity;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+  }
+
+  .crystal-dust {
+    position: fixed;
+    border-radius: 1px;
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    will-change: transform, opacity;
   }
 </style>
