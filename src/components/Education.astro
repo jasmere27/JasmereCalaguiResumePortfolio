@@ -3,7 +3,10 @@ import { education, certifications } from '../data/resume';
 ---
 
 <section id="education" class="section" aria-labelledby="education-heading">
-  <h2 id="education-heading" class="section-heading">Education</h2>
+  <div class="section-heading-row">
+    <span class="section-number mono-tag">05</span>
+    <h2 id="education-heading" class="section-heading">Education</h2>
+  </div>
 
   <div class="education-card" data-animate>
     <div>
@@ -25,6 +28,7 @@ import { education, certifications } from '../data/resume';
 <style>
   .education-card {
     margin-top: 1.75rem;
+    max-width: 36rem;
     padding: 1.75rem;
     background: var(--color-surface);
     border: 1px solid var(--color-border);

@@ -5,7 +5,10 @@ const slug = (org: string) => `exp-${org.toLowerCase().replace(/[^a-z0-9]+/g, '-
 ---
 
 <section id="experience" class="section" aria-labelledby="experience-heading">
-  <h2 id="experience-heading" class="section-heading mask-reveal"><span class="mask-reveal-inner">Experience</span></h2>
+  <div class="section-heading-row">
+    <span class="section-number mono-tag">03</span>
+    <h2 id="experience-heading" class="section-heading mask-reveal"><span class="mask-reveal-inner">Experience</span></h2>
+  </div>
 
   <ol class="timeline">
     {experience.map((job) => (
