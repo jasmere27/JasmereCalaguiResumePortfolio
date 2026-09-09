@@ -10,69 +10,43 @@ const slug = (name: string) => `project-${name.toLowerCase().replace(/[^a-z0-9]+
 ---
 
 <section id="projects" class="section" aria-labelledby="projects-heading">
-  <h2 id="projects-heading" class="section-heading mask-reveal"><span class="mask-reveal-inner">Projects</span></h2>
+  <div class="section-heading-row">
+    <span class="section-number mono-tag">04</span>
+    <h2 id="projects-heading" class="section-heading mask-reveal"><span class="mask-reveal-inner">Projects</span></h2>
+  </div>
   <p class="projects-intro">Independent and team-led work, from a research-driven AI system to client-ready tools. Click any project for the full case study.</p>
 
-  {featured && (
-    <button
-      type="button"
-      id={slug(featured.name)}
-      class="project-featured tilt-card spotlight-card"
-      data-tilt
-      data-animate
-      data-cursor
-      data-cursor-text="Case Study"
-      data-case-index="0"
-    >
-      <div class="project-featured-border" aria-hidden="true"></div>
-      <div class="project-featured-head">
-        <span class="mono-tag project-flag">Flagship project</span>
-        <span class="mono-tag project-period">{featured.period}</span>
-      </div>
-      <h3>{featured.name}</h3>
-      <p class="project-role">{featured.role}</p>
-      <p class="project-description">{featured.tagline}</p>
-
-      <ProjectGlyph stack={featured.stack} compact />
-
-      <ul class="project-stack">
-        {featured.stack.map((t) => (
-          <li>{t}</li>
-        ))}
-      </ul>
-
-      <span class="project-view-cta">View case study</span>
-    </button>
-  )}
-
-  <div class="project-grid">
-    {rest.map((project, i) => (
+  <div class="project-scenes">
+    {ordered.map((project, i) => (
       <button
         type="button"
         id={slug(project.name)}
-        class="project-card card tilt-card spotlight-card"
-        data-tilt
+        class:list={['project-scene spotlight-card', { 'is-featured': project.featured }]}
         data-animate
         data-cursor
         data-cursor-text="Case Study"
-        data-case-index={i + 1}
+        data-case-index={i}
       >
-        <div class="project-card-head">
-          <h3>{project.name}</h3>
-          <span class="mono-tag project-period">{project.period}</span>
+        <div class="project-scene-visual">
+          <ProjectGlyph stack={project.stack} />
         </div>
-        <p class="project-role">{project.role}</p>
-        <p class="project-description">{project.tagline}</p>
+        <div class="project-scene-copy">
+          {project.featured && <span class="mono-tag project-flag">Flagship project</span>}
+          <div class="project-scene-head">
+            <h3>{project.name}</h3>
+            <span class="mono-tag project-period">{project.period}</span>
+          </div>
+          <p class="project-role">{project.role}</p>
+          <p class="project-description">{project.tagline}</p>
 
-        <ProjectGlyph stack={project.stack} compact />
+          <ul class="project-stack">
+            {project.stack.map((t) => (
+              <li>{t}</li>
+            ))}
+          </ul>
 
-        <ul class="project-stack">
-          {project.stack.map((t) => (
-            <li>{t}</li>
-          ))}
-        </ul>
-
-        <span class="project-view-cta">View case study</span>
+          <span class="project-view-cta">View case study</span>
+        </div>
       </button>
     ))}
   </div>
@@ -176,38 +150,31 @@ const slug = (name: string) => `project-${name.toLowerCase().replace(/[^a-z0-9]+
 <script>
   import { gsap } from 'gsap';
 
-  const canTilt =
+  // Pointer-tracked spotlight glow only (no 3D tilt — a whole project scene
+  // is too large an element to tilt without feeling broken rather than
+  // premium; tilt stays reserved for small cards elsewhere in the site).
+  const canHover =
     window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
     !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  if (canTilt) {
-    const MAX_TILT = 7;
-    document.querySelectorAll<HTMLElement>('[data-tilt]').forEach((card) => {
-      const state = { rx: 0, ry: 0 };
-      const setRx = gsap.quickTo(state, 'rx', {
-        duration: 0.5,
+  if (canHover) {
+    document.querySelectorAll<HTMLElement>('.spotlight-card').forEach((card) => {
+      const state = { mx: 50, my: 50 };
+      const setMx = gsap.quickTo(state, 'mx', {
+        duration: 0.4,
         ease: 'power3.out',
-        onUpdate: () => card.style.setProperty('--tilt-x', `${state.rx}deg`),
+        onUpdate: () => card.style.setProperty('--mx', `${state.mx}%`),
       });
-      const setRy = gsap.quickTo(state, 'ry', {
-        duration: 0.5,
+      const setMy = gsap.quickTo(state, 'my', {
+        duration: 0.4,
         ease: 'power3.out',
-        onUpdate: () => card.style.setProperty('--tilt-y', `${state.ry}deg`),
+        onUpdate: () => card.style.setProperty('--my', `${state.my}%`),
       });
 
       card.addEventListener('pointermove', (e) => {
         const rect = card.getBoundingClientRect();
-        const px = (e.clientX - rect.left) / rect.width;
-        const py = (e.clientY - rect.top) / rect.height;
-        setRx((py - 0.5) * -MAX_TILT);
-        setRy((px - 0.5) * MAX_TILT);
-        card.style.setProperty('--mx', `${px * 100}%`);
-        card.style.setProperty('--my', `${py * 100}%`);
-      });
-
-      card.addEventListener('pointerleave', () => {
-        setRx(0);
-        setRy(0);
+        setMx(((e.clientX - rect.left) / rect.width) * 100);
+        setMy(((e.clientY - rect.top) / rect.height) * 100);
       });
     });
   }
@@ -235,9 +202,17 @@ const slug = (name: string) => `project-${name.toLowerCase().replace(/[^a-z0-9]+
     color: var(--color-text-muted);
   }
 
-  .project-featured,
-  .project-card {
-    display: block;
+  .project-scenes {
+    margin-top: 3.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4.5rem;
+  }
+
+  .project-scene {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
     width: 100%;
     text-align: left;
     font: inherit;
@@ -245,101 +220,60 @@ const slug = (name: string) => `project-${name.toLowerCase().replace(/[^a-z0-9]+
     cursor: pointer;
   }
 
-  .project-featured {
-    position: relative;
-    margin-top: 2.25rem;
-    padding: 2rem;
-    background: linear-gradient(155deg, var(--color-surface) 0%, var(--color-surface-raised) 100%);
-    border: 1px solid var(--color-accent-dim);
-    border-radius: 1rem;
+  .project-scene-visual :global(.glyph-full) {
+    transition: border-color 0.3s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .project-featured-border {
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    padding: 1px;
-    background: conic-gradient(
-      from 0deg,
-      transparent 0%,
-      var(--color-accent) 10%,
-      transparent 22%
-    );
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0;
-    animation: border-spin 3.2s linear infinite;
-    animation-play-state: paused;
-    transition: opacity 0.4s ease;
-    pointer-events: none;
+  .project-scene:hover .project-scene-visual :global(.glyph-full) {
+    border-color: var(--color-border-strong);
+    transform: translateY(-3px);
   }
 
-  .project-featured:hover .project-featured-border {
-    opacity: 1;
-    animation-play-state: running;
-  }
-
-  @keyframes border-spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  .project-featured-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  .project-scene.is-featured .project-scene-visual :global(.glyph-full) {
+    border-color: var(--color-accent-dim);
   }
 
   .project-flag {
+    display: inline-block;
+    margin-bottom: 0.6rem;
     color: var(--color-accent);
+  }
+
+  .project-scene-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  .project-scene-head h3 {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 1.2rem + 1.6vw, 2.15rem);
+    font-weight: 600;
+    color: var(--color-text);
   }
 
   .project-period {
     color: var(--color-text-faint);
-  }
-
-  .project-featured h3,
-  .project-card h3 {
-    font-family: var(--font-display);
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: var(--color-text);
-    margin-top: 0.75rem;
-  }
-
-  .project-featured h3 {
-    font-size: clamp(1.5rem, 1.3rem + 1vw, 1.9rem);
-  }
-
-  .project-card h3 {
-    font-size: 1.1rem;
-    margin-top: 0;
+    white-space: nowrap;
   }
 
   .project-role {
-    margin-top: 0.3rem;
-    font-size: 0.85rem;
+    margin-top: 0.4rem;
+    font-size: 0.9rem;
     color: var(--color-signal);
   }
 
   .project-description {
-    margin-top: 0.9rem;
-    color: var(--color-text-muted);
-    line-height: 1.65;
-    max-width: 40rem;
-  }
-
-  .project-featured :global(.glyph-compact),
-  .project-card :global(.glyph-compact) {
     margin-top: 1.1rem;
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    transform: translateZ(20px);
+    color: var(--color-text-muted);
+    line-height: 1.7;
+    font-size: 1.05rem;
+    max-width: 32rem;
   }
 
   .project-stack {
-    margin-top: 1.25rem;
+    margin-top: 1.5rem;
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -352,18 +286,17 @@ const slug = (name: string) => `project-${name.toLowerCase().replace(/[^a-z0-9]+
     padding: 0.25rem 0.55rem;
     border: 1px solid var(--color-border);
     border-radius: 0.35rem;
-    transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    transition: border-color 0.2s ease, color 0.2s ease;
     transition-delay: calc(var(--i, 0) * 30ms);
   }
 
-  .project-featured:hover .project-stack li,
-  .project-card:hover .project-stack li {
+  .project-scene:hover .project-stack li {
     border-color: var(--color-accent-dim);
   }
 
   .project-view-cta {
     position: relative;
-    margin-top: 1.5rem;
+    margin-top: 1.75rem;
     display: inline-block;
     font-family: var(--font-mono);
     font-size: 0.78rem;
@@ -384,37 +317,32 @@ const slug = (name: string) => `project-${name.toLowerCase().replace(/[^a-z0-9]+
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .project-featured:hover .project-view-cta,
-  .project-card:hover .project-view-cta {
+  .project-scene:hover .project-view-cta {
     color: var(--color-accent);
   }
 
-  .project-featured:hover .project-view-cta::after,
-  .project-card:hover .project-view-cta::after {
+  .project-scene:hover .project-view-cta::after {
     transform: scaleX(1);
   }
 
-  .project-grid {
-    margin-top: 1.5rem;
-    display: grid;
-    gap: 1.25rem;
-    grid-template-columns: 1fr;
-  }
+  @media (min-width: 56rem) {
+    .project-scene {
+      flex-direction: row;
+      align-items: center;
+      gap: 4rem;
+    }
 
-  .project-card {
-    padding: 1.75rem;
-  }
+    .project-scene-visual {
+      flex: 0 0 45%;
+    }
 
-  .project-card-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 1rem;
-  }
+    .project-scene-copy {
+      flex: 1;
+      min-width: 0;
+    }
 
-  @media (min-width: 42rem) {
-    .project-grid {
-      grid-template-columns: repeat(2, 1fr);
+    .project-scene:nth-child(even) {
+      flex-direction: row-reverse;
     }
   }
 </style>

@@ -33,7 +33,7 @@ const grouped = CATEGORY_ORDER.map((category) => ({
   </div>
 ) : (
   <div class="glyph-full" role="img" aria-label={`Architecture diagram: ${grouped.map((g) => `${g.category} — ${g.items.join(', ')}`).join('; ')}`}>
-    <p class="glyph-caption mono-tag">Architecture — grouped from the real stack, not a screenshot</p>
+    <p class="glyph-caption mono-tag">Real stack, grouped by layer. Not a screenshot.</p>
     <div class="glyph-layers">
       {grouped.map((g) => (
         <div class="glyph-layer">

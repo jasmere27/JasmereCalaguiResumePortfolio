@@ -3,7 +3,10 @@ import { TECH_CATEGORIES, TECH_DETAILS } from '../data/techDetails';
 ---
 
 <section id="skills" class="section" aria-labelledby="skills-heading">
-  <h2 id="skills-heading" class="section-heading">Skills</h2>
+  <div class="section-heading-row">
+    <span class="section-number mono-tag">02</span>
+    <h2 id="skills-heading" class="section-heading">Skills</h2>
+  </div>
   <p class="skills-intro">
     Technologies he actually uses, grouped by role in a build. Tap or hover any technology to see what it was for.
   </p>
@@ -165,9 +168,24 @@ import { TECH_CATEGORIES, TECH_DETAILS } from '../data/techDetails';
 
   .skills-groups {
     margin-top: 2.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1.75rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  @media (min-width: 56rem) {
+    .skills-groups {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+
+    .skills-groups .skill-group:last-child {
+      grid-column: 1 / -1;
+    }
+
+    .skills-groups .skill-group:last-child .skill-chip-row {
+      max-width: 30rem;
+    }
   }
 
   .skill-group {
