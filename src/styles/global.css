@@ -18,11 +18,17 @@
   --color-text: #edeef2;
   --color-text-muted: #9aa2b3;
   --color-text-faint: #8b93a9;
-  --color-accent: #e8a23d;
-  --color-accent-dim: #b9812f;
-  --color-accent-soft: rgba(232, 162, 61, 0.12);
-  --color-signal: #5fd3c4;
-  --color-signal-soft: rgba(95, 211, 196, 0.12);
+  /* Two-tier violet: --color-accent is light enough to use as TEXT on the
+     dark ink background (kicker, links, active states, numbers) — verified
+     ~7:1 against --color-ink. Buttons need the opposite pairing (light text
+     on a filled background), so -dim/-deep are deliberately darker and
+     paired with --color-text (near-white), each verified >=4.5:1 with it. */
+  --color-accent: #a78bfa;
+  --color-accent-dim: #7c3aed;
+  --color-accent-deep: #6d28d9;
+  --color-accent-soft: rgba(167, 139, 250, 0.14);
+  --color-signal: #38e0d6;
+  --color-signal-soft: rgba(56, 224, 214, 0.14);
 
   --breakpoint-xs: 30rem;
 }
@@ -156,13 +162,20 @@
       color 0.2s ease;
   }
 
+  /* Text is --color-text (near-white), not --color-ink, on purpose: the
+     gradient stays within the two DARK violet stops (-dim/-deep, both
+     independently verified >=4.5:1 with light text). --color-accent itself
+     is too light for this pairing — it's reserved for accent-as-text-color
+     contexts (kicker, links, numbers) against the dark page background. */
   .btn-primary {
-    background: var(--color-accent);
-    color: var(--color-ink);
+    background: linear-gradient(135deg, var(--color-accent-dim) 0%, var(--color-accent-deep) 100%);
+    color: var(--color-text);
+    box-shadow: 0 4px 20px -4px var(--color-accent-soft);
   }
 
   .btn-primary:hover {
-    background: #f0b158;
+    background: linear-gradient(135deg, var(--color-accent-deep) 0%, var(--color-accent-dim) 100%);
+    box-shadow: 0 8px 32px -4px var(--color-accent-soft), 0 0 28px var(--color-accent-soft);
     transform: translateY(-1px);
   }
 
@@ -232,7 +245,7 @@
       border-color: var(--color-accent);
     }
     100% {
-      box-shadow: 0 0 0 14px rgba(232, 162, 61, 0);
+      box-shadow: 0 0 0 14px rgba(167, 139, 250, 0);
       border-color: var(--color-border-strong);
     }
   }
