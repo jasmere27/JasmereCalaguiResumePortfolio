@@ -31,15 +31,9 @@ const slug = (name: string) => `project-${name.toLowerCase().replace(/[^a-z0-9]+
       </div>
       <h3>{featured.name}</h3>
       <p class="project-role">{featured.role}</p>
-      <p class="project-description">{featured.description}</p>
+      <p class="project-description">{featured.tagline}</p>
 
       <ProjectGlyph stack={featured.stack} compact />
-
-      <ul class="project-features">
-        {featured.features.map((f) => (
-          <li>{f}</li>
-        ))}
-      </ul>
 
       <ul class="project-stack">
         {featured.stack.map((t) => (
@@ -47,7 +41,7 @@ const slug = (name: string) => `project-${name.toLowerCase().replace(/[^a-z0-9]+
         ))}
       </ul>
 
-      <span class="project-view-cta">View case study <span aria-hidden="true">→</span></span>
+      <span class="project-view-cta">View case study</span>
     </button>
   )}
 
@@ -68,15 +62,9 @@ const slug = (name: string) => `project-${name.toLowerCase().replace(/[^a-z0-9]+
           <span class="mono-tag project-period">{project.period}</span>
         </div>
         <p class="project-role">{project.role}</p>
-        <p class="project-description">{project.description}</p>
+        <p class="project-description">{project.tagline}</p>
 
         <ProjectGlyph stack={project.stack} compact />
-
-        <ul class="project-features">
-          {project.features.map((f) => (
-            <li>{f}</li>
-          ))}
-        </ul>
 
         <ul class="project-stack">
           {project.stack.map((t) => (
@@ -84,7 +72,7 @@ const slug = (name: string) => `project-${name.toLowerCase().replace(/[^a-z0-9]+
           ))}
         </ul>
 
-        <span class="project-view-cta">View case study <span aria-hidden="true">→</span></span>
+        <span class="project-view-cta">View case study</span>
       </button>
     ))}
   </div>
@@ -350,31 +338,6 @@ const slug = (name: string) => `project-${name.toLowerCase().replace(/[^a-z0-9]+
     transform: translateZ(20px);
   }
 
-  .project-features {
-    margin-top: 1.1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .project-features li {
-    position: relative;
-    padding-left: 1.1rem;
-    font-size: 0.9rem;
-    line-height: 1.6;
-    color: var(--color-text-muted);
-  }
-
-  .project-features li::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0.6em;
-    width: 5px;
-    height: 1px;
-    background: var(--color-text-faint);
-  }
-
   .project-stack {
     margin-top: 1.25rem;
     display: flex;
@@ -399,29 +362,36 @@ const slug = (name: string) => `project-${name.toLowerCase().replace(/[^a-z0-9]+
   }
 
   .project-view-cta {
+    position: relative;
     margin-top: 1.5rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
+    display: inline-block;
     font-family: var(--font-mono);
     font-size: 0.78rem;
     color: var(--color-text-faint);
-    transition: color 0.2s ease, gap 0.2s ease;
+    transition: color 0.2s ease;
   }
 
-  .project-view-cta span {
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  .project-view-cta::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -3px;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .project-featured:hover .project-view-cta,
   .project-card:hover .project-view-cta {
     color: var(--color-accent);
-    gap: 0.6rem;
   }
 
-  .project-featured:hover .project-view-cta span,
-  .project-card:hover .project-view-cta span {
-    transform: translateX(3px);
+  .project-featured:hover .project-view-cta::after,
+  .project-card:hover .project-view-cta::after {
+    transform: scaleX(1);
   }
 
   .project-grid {

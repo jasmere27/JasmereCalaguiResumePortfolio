@@ -1,0 +1,171 @@
+---
+// A slow-orbiting ring of Jasmere's real skill categories (from resume.ts),
+// not a decorative blob — the hero's visual anchor instead of more copy.
+// Purely supplementary: the same categories are shown accessibly in Skills
+// below, so this is aria-hidden like About's NodeGraph.
+import { skills } from '../data/resume';
+
+const CATEGORY_KEYS = ['Languages', 'Web & Frameworks', 'Databases', 'AI / ML'];
+const nodes = CATEGORY_KEYS.map((key) => skills.find((s) => s.category === key)).filter(
+  (s): s is NonNullable<typeof s> => Boolean(s)
+);
+
+const RADIUS = 118;
+const CENTER = 150;
+const angleFor = (i: number, total: number) => (i / total) * 360 - 90;
+const pointFor = (i: number, total: number) => {
+  const rad = (angleFor(i, total) * Math.PI) / 180;
+  return { x: CENTER + RADIUS * Math.cos(rad), y: CENTER + RADIUS * Math.sin(rad) };
+};
+---
+
+<div class="hero-orbit" aria-hidden="true">
+  <svg viewBox="0 0 300 300" fill="none">
+    <circle cx={CENTER} cy={CENTER} r={RADIUS} class="orbit-ring" stroke-width="1" />
+    <g class="orbit-spin">
+      {nodes.map((n, i) => {
+        const { x, y } = pointFor(i, nodes.length);
+        return (
+          <g class="orbit-node" transform={`translate(${x}, ${y})`} data-i={i} data-category={n.category}>
+            <circle r="20" class="orbit-node-halo" />
+            <circle r="4" class="orbit-node-dot" />
+          </g>
+        );
+      })}
+    </g>
+    <circle cx={CENTER} cy={CENTER} r="46" class="orbit-hub" />
+    <text x={CENTER} y={CENTER + 5} text-anchor="middle" class="orbit-hub-mark">JPC</text>
+  </svg>
+
+  <ul class="orbit-legend">
+    {nodes.map((n, i) => (
+      <li class="orbit-legend-item" data-i={i} data-category={n.category}>
+        <span class="orbit-legend-dot"></span>
+        {n.category}
+      </li>
+    ))}
+  </ul>
+</div>
+
+<script>
+  import { gsap } from 'gsap';
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const spin = document.querySelector<SVGGElement>('.orbit-spin');
+  const nodeEls = document.querySelectorAll<SVGGElement>('.orbit-node');
+
+  if (spin && !reducedMotion) {
+    gsap.to(spin, { rotate: 360, duration: 70, repeat: -1, ease: 'none', transformOrigin: '150px 150px' });
+    // Counter-rotate each node's dot so it doesn't itself appear to orbit its
+    // own center — only the ring position should move.
+    nodeEls.forEach((n) => {
+      gsap.to(n, { rotate: -360, duration: 70, repeat: -1, ease: 'none', transformOrigin: 'center' });
+    });
+  }
+
+  nodeEls.forEach((n) => {
+    const i = n.dataset.i;
+    const legend = document.querySelector(`.orbit-legend-item[data-i="${i}"]`);
+    const activate = () => legend?.classList.add('is-active');
+    const deactivate = () => legend?.classList.remove('is-active');
+    n.addEventListener('pointerenter', activate);
+    n.addEventListener('pointerleave', deactivate);
+  });
+</script>
+
+<style>
+  .hero-orbit {
+    position: relative;
+    width: 100%;
+    max-width: 21rem;
+    margin-inline: auto;
+  }
+
+  .hero-orbit svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .orbit-ring {
+    stroke: var(--color-border-strong);
+  }
+
+  .orbit-hub {
+    fill: var(--color-surface-raised);
+    stroke: var(--color-border-strong);
+    stroke-width: 1;
+  }
+
+  .orbit-hub-mark {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    fill: var(--color-text);
+  }
+
+  .orbit-node-halo {
+    fill: var(--color-accent-soft);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  .orbit-node[data-category='AI / ML'] .orbit-node-halo {
+    fill: var(--color-signal-soft);
+  }
+
+  .orbit-node-dot {
+    fill: var(--color-accent);
+    transition: r 0.25s ease;
+  }
+
+  .orbit-node[data-category='AI / ML'] .orbit-node-dot {
+    fill: var(--color-signal);
+  }
+
+  .orbit-node:hover .orbit-node-halo {
+    opacity: 1;
+  }
+
+  .orbit-node:hover .orbit-node-dot {
+    r: 5.5;
+  }
+
+  .orbit-legend {
+    margin-top: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem 1rem;
+  }
+
+  .orbit-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--color-text-faint);
+    transition: color 0.2s ease;
+  }
+
+  .orbit-legend-item.is-active {
+    color: var(--color-text-muted);
+  }
+
+  .orbit-legend-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-border-strong);
+    flex-shrink: 0;
+  }
+
+  .orbit-legend-item.is-active .orbit-legend-dot {
+    background: var(--color-accent);
+  }
+
+  .orbit-legend-item[data-category='AI / ML'].is-active .orbit-legend-dot {
+    background: var(--color-signal);
+  }
+</style>

@@ -132,6 +132,27 @@ const initials = profile.name
   const progressEl = document.getElementById('rail-progress');
   const topbar = document.getElementById('topbar');
   const siteNav = document.getElementById('site-nav');
+  const rail = document.querySelector<HTMLElement>('.rail');
+
+  // The nav carries no chrome over the hero — it slides/fades in once the
+  // visitor has mostly scrolled past it, and hides again on the way back up.
+  // `inert` (not just opacity) keeps its links out of the tab order while
+  // hidden, matching what's already visually true.
+  const hero = document.getElementById('hero');
+  function setNavRevealed(revealed: boolean) {
+    siteNav?.classList.toggle('nav-revealed', revealed);
+    if (rail) rail.inert = !revealed;
+    if (topbar) topbar.inert = !revealed;
+  }
+
+  if (hero && 'IntersectionObserver' in window) {
+    new IntersectionObserver(([entry]) => setNavRevealed(!entry.isIntersecting), {
+      rootMargin: '0px 0px -60% 0px',
+      threshold: 0,
+    }).observe(hero);
+  } else {
+    setNavRevealed(true);
+  }
 
   let ticking = false;
   const updateOnScroll = () => {
@@ -176,9 +197,18 @@ const initials = profile.name
     background: transparent;
     backdrop-filter: blur(0px);
     border-bottom: 1px solid transparent;
+    opacity: 0;
+    transform: translateY(-0.6rem);
+    pointer-events: none;
     transition: padding 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.35s ease,
-      border-color 0.35s ease, backdrop-filter 0.35s ease;
-    animation: nav-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+      border-color 0.35s ease, backdrop-filter 0.35s ease,
+      opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .nav-revealed .topbar {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
   }
 
   .topbar.is-scrolled {
@@ -186,17 +216,6 @@ const initials = profile.name
     background: color-mix(in srgb, var(--color-ink) 88%, transparent);
     backdrop-filter: blur(10px);
     border-bottom-color: var(--color-border);
-  }
-
-  @keyframes nav-in {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
   }
 
   .topbar-mark {
@@ -310,36 +329,21 @@ const initials = profile.name
       width: 17rem;
       padding: 3rem 2.5rem;
       border-right: 1px solid var(--color-border);
-      transition: border-color 0.4s ease;
+      opacity: 0;
+      transform: translateX(-0.75rem);
+      pointer-events: none;
+      transition: border-color 0.4s ease, opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .nav-revealed .rail {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
     }
 
     .site-nav.is-scrolled .rail {
       border-right-color: var(--color-border-strong);
-    }
-
-    .rail-mark {
-      animation: rail-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
-    }
-
-    .rail-nav li {
-      animation: rail-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
-      animation-delay: calc(0.12s + var(--i, 0) * 0.06s);
-    }
-
-    .rail-footer {
-      animation: rail-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
-      animation-delay: 0.55s;
-    }
-
-    @keyframes rail-in {
-      from {
-        opacity: 0;
-        transform: translateX(-8px);
-      }
-      to {
-        opacity: 1;
-        transform: translateX(0);
-      }
     }
 
     .rail-mark-glyph {
