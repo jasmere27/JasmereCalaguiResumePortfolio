@@ -1,5 +1,6 @@
 ---
 import { profile, experience, projects, skills, certifications } from '../data/resume';
+import HeroOrbit from './HeroOrbit.astro';
 
 const totalTechnologies = skills.reduce((sum, group) => sum + group.items.length, 0);
 
@@ -16,30 +17,36 @@ const nameWords = profile.name.split(' ');
 <section class="hero" aria-label="Introduction" id="hero">
   <div class="hero-glow" aria-hidden="true"></div>
 
-  <div class="hero-copy">
-    <p class="hero-kicker mono-tag">Software Developer · Pampanga, Philippines</p>
-    <h1 class="hero-name">
-      {nameWords.map((word) => (
-        <span class="word-mask"><span class="word-mask-inner">{word}</span></span>
-      ))}
-    </h1>
-    <p class="hero-role">{profile.subtitle}</p>
-    <p class="hero-tagline text-balance">{profile.tagline}</p>
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <p class="hero-kicker mono-tag">Software Developer · Pampanga, Philippines</p>
+      <h1 class="hero-name">
+        {nameWords.map((word) => (
+          <span class="word-mask"><span class="word-mask-inner">{word}</span></span>
+        ))}
+      </h1>
+      <p class="hero-role">{profile.subtitle}</p>
+      <p class="hero-tagline text-balance">{profile.tagline}</p>
 
-    <div class="hero-actions">
-      <a href="#projects" class="btn btn-primary" data-cursor>View my work</a>
-      <a href="#contact" class="btn btn-ghost" data-cursor>Contact me</a>
+      <div class="hero-actions">
+        <a href="#contact" class="btn btn-primary" data-cursor>Contact me</a>
+        <a href="#projects" class="btn btn-ghost" data-cursor>View my projects</a>
+      </div>
+
+      <dl class="hero-stats">
+        {stats.map((s) => (
+          <div class="hero-stat">
+            <dt class="hero-stat-value" data-count={s.value}>{s.value}</dt>
+            <dd class="hero-stat-label">{s.label}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+
+    <div class="hero-visual">
+      <HeroOrbit />
     </div>
   </div>
-
-  <dl class="hero-stats">
-    {stats.map((s) => (
-      <div class="hero-stat">
-        <dt class="hero-stat-value" data-count={s.value}>{s.value}</dt>
-        <dd class="hero-stat-label">{s.label}</dd>
-      </div>
-    ))}
-  </dl>
 </section>
 
 <script>
@@ -55,7 +62,7 @@ const nameWords = profile.name.split(' ');
   if (!reducedMotion) {
     gsap.set('.word-mask-inner', { yPercent: 112 });
     gsap.set(
-      ['.hero-kicker', '.hero-role', '.hero-tagline', '.hero-actions .btn', '.hero-stats'],
+      ['.hero-kicker', '.hero-role', '.hero-tagline', '.hero-actions .btn', '.hero-stats', '.hero-visual'],
       { opacity: 0, y: 16 }
     );
 
@@ -68,7 +75,8 @@ const nameWords = profile.name.split(' ');
       )
       .to('.hero-role', { opacity: 1, y: 0 }, '-=0.55')
       .to('.hero-tagline', { opacity: 1, y: 0 }, '-=0.5')
-      .to('.hero-actions .btn', { opacity: 1, y: 0, stagger: 0.1 }, '-=0.45')
+      .to('.hero-visual', { opacity: 1, y: 0, duration: 0.9 }, '-=0.5')
+      .to('.hero-actions .btn', { opacity: 1, y: 0, stagger: 0.1 }, '-=0.7')
       .to('.hero-stats', { opacity: 1, y: 0 }, '-=0.5');
   }
 
@@ -130,10 +138,21 @@ const nameWords = profile.name.split(' ');
     z-index: 0;
   }
 
-  .hero-copy {
+  .hero-inner {
     position: relative;
     z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+  }
+
+  .hero-copy {
     max-width: 42rem;
+  }
+
+  .hero-visual {
+    display: flex;
+    justify-content: center;
   }
 
   .hero-kicker {

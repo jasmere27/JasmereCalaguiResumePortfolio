@@ -131,6 +131,7 @@ export type Project = {
   role: string;
   period: string;
   featured: boolean;
+  tagline: string;
   description: string;
   features: string[];
   stack: string[];
@@ -143,6 +144,7 @@ export const projects: Project[] = [
     role: 'Principal Investigator & Full-Stack Developer',
     period: '2025',
     featured: true,
+    tagline: 'AI-powered fake news detection across text, image, and audio.',
     description:
       'An AI-powered fake news detection system that combines NLP, machine learning, OCR, and speech-to-text so a claim can be checked whether it arrives as text, an image, or audio.',
     features: [
@@ -158,6 +160,7 @@ export const projects: Project[] = [
     role: 'Project Leader & Full-Stack Developer',
     period: '2026',
     featured: false,
+    tagline: 'A mobile app led end-to-end, from feature design to backend.',
     description:
       'A mobile application led from concept through delivery, covering feature design, UI, and backend data.',
     features: [
@@ -172,6 +175,7 @@ export const projects: Project[] = [
     role: 'Project Leader & Full-Stack Developer',
     period: '2023',
     featured: false,
+    tagline: 'A responsive blogging platform with full content management.',
     description:
       'A responsive blogging platform with a full content management layer, built and led end to end.',
     features: [

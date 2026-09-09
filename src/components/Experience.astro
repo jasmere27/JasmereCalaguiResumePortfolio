@@ -39,15 +39,66 @@ const slug = (org: string) => `exp-${org.toLowerCase().replace(/[^a-z0-9]+/g, '-
   </ol>
 </section>
 
+<script>
+  import { gsap } from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  // The timeline's left rail fills in accent color as the visitor scrolls
+  // through it — a small, honest "progress through the career" cue rather
+  // than a decorative flourish. Reduced motion gets the fully-drawn line
+  // immediately; nothing here is required to read the content.
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const timeline = document.querySelector<HTMLElement>('.timeline');
+
+  if (timeline) {
+    if (reducedMotion) {
+      timeline.style.setProperty('--fill', '1');
+    } else {
+      gsap.to(timeline, {
+        '--fill': 1,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: timeline,
+          start: 'top 75%',
+          end: 'bottom 65%',
+          scrub: 0.6,
+        },
+      });
+    }
+  }
+</script>
+
 <style>
   .timeline {
     margin-top: 2.5rem;
     position: relative;
     padding-left: 1.5rem;
-    border-left: 1px solid var(--color-border);
     display: flex;
     flex-direction: column;
     gap: 2.75rem;
+    --fill: 0;
+  }
+
+  .timeline::before,
+  .timeline::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1px;
+  }
+
+  .timeline::before {
+    bottom: 0;
+    background: var(--color-border);
+  }
+
+  .timeline::after {
+    height: calc(var(--fill, 0) * 100%);
+    background: var(--color-accent);
+    box-shadow: 0 0 6px var(--color-accent-soft);
   }
 
   .timeline-item {

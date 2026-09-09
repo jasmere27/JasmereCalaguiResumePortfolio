@@ -14,11 +14,17 @@ const year = 2026;
 <style>
   .site-footer {
     margin-top: 4rem;
-    padding: 2.25rem 0 3rem;
+    /* Bottom padding clears the fixed AI-assistant button's footprint
+       (3.75rem circle, 1.25rem from the viewport edge) so the footer's own
+       content never sits underneath it once the page is scrolled to the
+       very bottom. */
+    padding: 2.25rem 1.5rem 5.5rem;
     border-top: 1px solid var(--color-border);
   }
 
   .footer-inner {
+    max-width: 46rem;
+    margin-inline: auto;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -50,6 +56,9 @@ const year = 2026;
       flex-direction: row;
       align-items: center;
       justify-content: space-between;
+      /* Reserves room clear of the fixed assistant button regardless of
+         how wide the content column ends up. */
+      padding-right: 4.5rem;
     }
 
     .footer-email {
